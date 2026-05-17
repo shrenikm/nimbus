@@ -24,7 +24,6 @@ class TestNimbusCloudConfigConstruction:
         assert config.secret_access_key == "sk"
         assert config.bucket_prefix == DEFAULT_BUCKET_PREFIX
         assert config.region == DEFAULT_REGION
-        assert dict(config.bucket_overrides) == {}
 
     def test_repr_does_not_leak_secret(self) -> None:
         config = NimbusCloudConfig(
@@ -76,26 +75,6 @@ class TestBucketNameResolution:
         assert config.bucket_name(NimbusBucketType.DATASETS) == "my-prefix-datasets"
         assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "my-prefix-checkpoints"
 
-    def test_explicit_overrides_take_precedence(self) -> None:
-        config = NimbusCloudConfig(
-            endpoint_url="https://example.com",
-            access_key_id="ak",
-            secret_access_key="sk",
-            bucket_prefix="my-prefix",
-            bucket_overrides={NimbusBucketType.CHECKPOINTS: "custom-ckpt-bucket"},
-        )
-        assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "custom-ckpt-bucket"
-        assert config.bucket_name(NimbusBucketType.DATASETS) == "my-prefix-datasets"
-
-    def test_overrides_accept_string_keys(self) -> None:
-        config = NimbusCloudConfig(
-            endpoint_url="https://example.com",
-            access_key_id="ak",
-            secret_access_key="sk",
-            bucket_overrides={"checkpoints": "custom-ckpt-bucket"},
-        )
-        assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "custom-ckpt-bucket"
-
     def test_string_bucket_type_resolved(self) -> None:
         config = NimbusCloudConfig(
             endpoint_url="https://example.com",
@@ -143,15 +122,6 @@ class TestFromEnv:
         monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "sk")
         config = NimbusCloudConfig.from_env()
         assert config.endpoint_url == "https://explicit.example.com"
-
-    def test_per_type_overrides(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        self._setup_required(monkeypatch)
-        monkeypatch.setenv("NIMBUS_BUCKET_CHECKPOINTS", "my-ckpts")
-        monkeypatch.setenv("NIMBUS_BUCKET_DATASETS", "my-datasets")
-        config = NimbusCloudConfig.from_env()
-        assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "my-ckpts"
-        assert config.bucket_name(NimbusBucketType.DATASETS) == "my-datasets"
-        assert config.bucket_name(NimbusBucketType.RAW_DATA).endswith("-raw-data")
 
     def test_missing_credentials_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("R2_ENDPOINT_URL", "https://example.com")

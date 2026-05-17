@@ -37,18 +37,9 @@ full list. The minimum required vars:
 | `R2_ACCESS_KEY_ID`      | Access key.                                              |
 | `R2_SECRET_ACCESS_KEY`  | Secret key.                                              |
 
-Optional per-bucket overrides:
-
-| Variable                       | Purpose                                              |
-|--------------------------------|------------------------------------------------------|
-| `NIMBUS_BUCKET_RAW_DATA`       | Override bucket name for the `raw-data` category.    |
-| `NIMBUS_BUCKET_DATASETS`       | Override bucket name for the `datasets` category.    |
-| `NIMBUS_BUCKET_CHECKPOINTS`    | Override bucket name for the `checkpoints` category. |
-| `NIMBUS_BUCKET_TEST`           | Override bucket name for the `test` category.        |
-
-By default the four buckets are named `nimbus-raw-data`, `nimbus-datasets`,
-`nimbus-checkpoints`, and `nimbus-test`. Buckets must already exist on the
-provider — nimbus does not create or delete buckets.
+The four buckets are named `nimbus-raw-data`, `nimbus-datasets`,
+`nimbus-checkpoints`, and `nimbus-test`. These names are fixed and must
+already exist on the provider — nimbus does not create or delete buckets.
 
 All buckets are expected to be private. Nimbus never enables public access
 or generates public links; use presigned URLs for short-lived sharing.
@@ -69,9 +60,8 @@ NimbusBucketType.TEST          # "test"         used only by the integration sui
 `TEST` is reserved for the integration tests in this package and exists so
 that test artifacts never share a bucket with real data.
 
-Because `NimbusBucketType` is a `StrEnum`, every API also accepts plain strings.
-If you maintain your own taxonomy, just pass strings and configure the
-matching `NIMBUS_BUCKET_*` overrides.
+Because `NimbusBucketType` is a `StrEnum`, every API also accepts the raw
+string values (`"raw-data"`, `"datasets"`, `"checkpoints"`, `"test"`).
 
 ## Programmatic API
 

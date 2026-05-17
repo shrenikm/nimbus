@@ -21,9 +21,7 @@ TEST_REGION = "us-east-1"
 
 
 @pytest.fixture(autouse=True)
-def _isolate_nimbus_env(
-    request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def _isolate_nimbus_env(request: pytest.FixtureRequest, monkeypatch: pytest.MonkeyPatch) -> None:
     """
     Strip every R2_/NIMBUS_ env var and disable .env loading so each unit
     test starts from a known, hermetic state — even if the developer has a
