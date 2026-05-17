@@ -22,4 +22,4 @@ def test_bucket_type_round_trip_from_value() -> None:
 
 
 def test_bucket_type_membership_set() -> None:
-    assert {b.value for b in NimbusBucketType} == {"raw-data", "datasets", "checkpoints"}
+    assert {b.value for b in NimbusBucketType} == {"raw-data", "datasets", "checkpoints", "test"}

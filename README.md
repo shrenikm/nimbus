@@ -37,36 +37,31 @@ full list. The minimum required vars:
 | `R2_ACCESS_KEY_ID`      | Access key.                                              |
 | `R2_SECRET_ACCESS_KEY`  | Secret key.                                              |
 
-Optional per-bucket overrides:
-
-| Variable                       | Purpose                                              |
-|--------------------------------|------------------------------------------------------|
-| `NIMBUS_BUCKET_RAW_DATA`       | Override bucket name for the `raw-data` category.    |
-| `NIMBUS_BUCKET_DATASETS`       | Override bucket name for the `datasets` category.    |
-| `NIMBUS_BUCKET_CHECKPOINTS`    | Override bucket name for the `checkpoints` category. |
-
-By default the three buckets are named `nimbus-raw-data`, `nimbus-datasets`,
-and `nimbus-checkpoints`. Buckets must already exist on the provider —
-nimbus does not create or delete buckets.
+The four buckets are named `nimbus-raw-data`, `nimbus-datasets`,
+`nimbus-checkpoints`, and `nimbus-test`. These names are fixed and must
+already exist on the provider — nimbus does not create or delete buckets.
 
 All buckets are expected to be private. Nimbus never enables public access
 or generates public links; use presigned URLs for short-lived sharing.
 
 ## Bucket types
 
-Three generic categories ship with the package, all `StrEnum` values:
+Four categories ship with the package, all `StrEnum` values:
 
 ```python
 from nimbus import NimbusBucketType
 
-NimbusBucketType.RAW_DATA      # "raw-data"
-NimbusBucketType.DATASETS      # "datasets"
-NimbusBucketType.CHECKPOINTS   # "checkpoints"
+NimbusBucketType.RAW_DATA      # "raw-data"     general/curated raw data
+NimbusBucketType.DATASETS      # "datasets"     processed datasets
+NimbusBucketType.CHECKPOINTS   # "checkpoints"  model checkpoints
+NimbusBucketType.TEST          # "test"         used only by the integration suite
 ```
 
-Because `NimbusBucketType` is a `StrEnum`, every API also accepts plain strings.
-If you maintain your own taxonomy, just pass strings and configure the
-matching `NIMBUS_BUCKET_*` overrides.
+`TEST` is reserved for the integration tests in this package and exists so
+that test artifacts never share a bucket with real data.
+
+Because `NimbusBucketType` is a `StrEnum`, every API also accepts the raw
+string values (`"raw-data"`, `"datasets"`, `"checkpoints"`, `"test"`).
 
 ## Programmatic API
 
@@ -138,7 +133,7 @@ nimbus rm       <bucket-type> <project> <key>
 nimbus presign  <bucket-type> <project> <key> [--expires 3600]
 ```
 
-`<bucket-type>` is one of `raw-data | datasets | checkpoints`. Examples:
+`<bucket-type>` is one of `raw-data | datasets | checkpoints | test`. Examples:
 
 ```
 nimbus upload checkpoints my-project run-abc/best.pth ./best.pth
@@ -147,6 +142,14 @@ nimbus presign datasets shared my-dataset-v1/sample.parquet --expires 7200
 ```
 
 `nimbus exists` exits 0 when the object is present and 1 when it is not.
+
+Help is available via `-h` or `--help` at any level:
+
+```
+nimbus              # bare invocation shows the top-level help
+nimbus -h
+nimbus upload -h
+```
 
 ## Transfer defaults
 
@@ -169,10 +172,10 @@ pytest                                  # unit tests only (moto-mocked, fully of
 NIMBUS_INTEGRATION_TESTS=1 pytest -m integration  # opt-in real-bucket tests
 ```
 
-The integration suite requires valid credentials and writes/deletes a
-unique key under `itest/...` inside whichever bucket-type / project you
-have configured (`NIMBUS_INTEGRATION_BUCKET_TYPE`,
-`NIMBUS_INTEGRATION_PROJECT`).
+The integration suite requires valid credentials. It always writes to the
+`test` bucket (default `nimbus-test`) under the `integration-tests` project
+namespace, using unique keys under `itest/...` and cleaning up after itself.
+It will not touch any other bucket.
 
 ## License
 

@@ -1,5 +1,5 @@
 """
-Click-based command-line interface for nimbus.
+Typer + Rich command-line interface for nimbus.
 
 Console entry point is registered as `nimbus` in pyproject.toml.
 """
@@ -7,146 +7,233 @@ Console entry point is registered as `nimbus` in pyproject.toml.
 from __future__ import annotations
 
 import sys
-from collections.abc import Sequence
+from pathlib import Path
+from typing import Annotated
 
-import click
+import click.exceptions
+import typer
+from rich.console import Console
 
 from nimbus.bucket import NimbusBucketType
 from nimbus.config import NimbusCloudConfig
-from nimbus.exceptions import NimbusError
+from nimbus.exceptions import NimbusError, NimbusObjectNotFoundError
 from nimbus.storage import DEFAULT_PRESIGN_EXPIRES_IN, NimbusCloudStorage
 
-BUCKET_TYPE_VALUES: tuple[str, ...] = tuple(b.value for b in NimbusBucketType)
-BUCKET_TYPE_CHOICE = click.Choice(BUCKET_TYPE_VALUES, case_sensitive=False)
+CONTEXT_SETTINGS = {"help_option_names": ["-h", "--help"]}
+
+app = typer.Typer(
+    name="nimbus",
+    help=(
+        "nimbus: small CLI for storing files on S3-compatible object storage. "
+        "Buckets are addressed by a bucket-type / project / key triple."
+    ),
+    add_completion=False,
+    no_args_is_help=True,
+    rich_markup_mode="rich",
+    context_settings=CONTEXT_SETTINGS,
+)
+
+console = Console()
+error_console = Console(stderr=True, style="bold red")
 
 
 def _build_storage() -> NimbusCloudStorage:
     return NimbusCloudStorage(NimbusCloudConfig.from_env())
 
 
-@click.group(
-    help=(
-        "nimbus: small CLI for storing files on S3-compatible object storage. "
-        "Buckets are addressed by a bucket-type / project / key triple."
-    )
-)
-@click.version_option(package_name="nimbus")
-def main() -> None:
-    """
-    Top-level command group.
-    """
+BucketArg = Annotated[
+    NimbusBucketType,
+    typer.Argument(help="One of: raw-data | datasets | checkpoints | test.", show_default=False),
+]
+ProjectArg = Annotated[
+    str,
+    typer.Argument(help="Project namespace (top-level prefix inside the bucket).", show_default=False),
+]
+KeyArg = Annotated[
+    str,
+    typer.Argument(help="Object key relative to the project namespace.", show_default=False),
+]
+NoProgressOpt = Annotated[
+    bool,
+    typer.Option("--no-progress", help="Suppress the tqdm progress bar."),
+]
 
 
-@main.command("upload", help="Upload a local file to <bucket-type>/<project>/<key>.")
-@click.argument("bucket_type", type=BUCKET_TYPE_CHOICE)
-@click.argument("project", type=str)
-@click.argument("key", type=str)
-@click.argument("local_path", type=click.Path(exists=True, dir_okay=False, readable=True))
-@click.option("--no-progress", "no_progress", is_flag=True, help="Suppress the tqdm progress bar.")
-def upload_command(bucket_type: str, project: str, key: str, local_path: str, no_progress: bool) -> None:
+@app.command(context_settings=CONTEXT_SETTINGS)
+def upload(
+    bucket_type: BucketArg,
+    project: ProjectArg,
+    key: KeyArg,
+    local_path: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=True,
+            dir_okay=False,
+            readable=True,
+            help="Local file to upload.",
+            show_default=False,
+        ),
+    ],
+    no_progress: NoProgressOpt = False,
+) -> None:
+    """
+    Upload a local file to [bold]<bucket-type>/<project>/<key>[/bold].
+    """
     storage = _build_storage()
     object_key = storage.upload_file(
-        bucket=NimbusBucketType(bucket_type.lower()),
+        bucket=bucket_type,
         project=project,
         key=key,
         local_path=local_path,
         show_progress=not no_progress,
     )
-    bucket_name = storage.config.bucket_name(NimbusBucketType(bucket_type.lower()))
-    click.echo(f"uploaded s3://{bucket_name}/{object_key}")
+    bucket_name = storage.config.bucket_name(bucket_type)
+    console.print(f"[green]uploaded[/green] s3://{bucket_name}/{object_key}")
 
 
-@main.command("download", help="Download an object to a local file.")
-@click.argument("bucket_type", type=BUCKET_TYPE_CHOICE)
-@click.argument("project", type=str)
-@click.argument("key", type=str)
-@click.argument("local_path", type=click.Path(dir_okay=False, writable=True))
-@click.option("--no-progress", "no_progress", is_flag=True, help="Suppress the tqdm progress bar.")
-def download_command(bucket_type: str, project: str, key: str, local_path: str, no_progress: bool) -> None:
+@app.command(context_settings=CONTEXT_SETTINGS)
+def download(
+    bucket_type: BucketArg,
+    project: ProjectArg,
+    key: KeyArg,
+    local_path: Annotated[
+        Path,
+        typer.Argument(
+            file_okay=True,
+            dir_okay=False,
+            writable=True,
+            help="Destination file path.",
+            show_default=False,
+        ),
+    ],
+    no_progress: NoProgressOpt = False,
+) -> None:
+    """
+    Download an object to a local file.
+    """
     storage = _build_storage()
     destination = storage.download_file(
-        bucket=NimbusBucketType(bucket_type.lower()),
+        bucket=bucket_type,
         project=project,
         key=key,
         local_path=local_path,
         show_progress=not no_progress,
     )
-    click.echo(f"downloaded to {destination}")
+    console.print(f"[green]downloaded[/green] to {destination}")
 
 
-@main.command("ls", help="List keys under a project (optionally filtered by key prefix).")
-@click.argument("bucket_type", type=BUCKET_TYPE_CHOICE)
-@click.argument("project", type=str)
-@click.argument("key_prefix", type=str, required=False, default="")
-def ls_command(bucket_type: str, project: str, key_prefix: str) -> None:
-    storage = _build_storage()
-    keys = storage.list_keys(bucket=NimbusBucketType(bucket_type.lower()), project=project, key_prefix=key_prefix)
-    for object_key in keys:
-        click.echo(object_key)
-
-
-@main.command("exists", help="Check whether an object exists (exit 0 if yes, 1 if no).")
-@click.argument("bucket_type", type=BUCKET_TYPE_CHOICE)
-@click.argument("project", type=str)
-@click.argument("key", type=str)
-def exists_command(bucket_type: str, project: str, key: str) -> None:
-    storage = _build_storage()
-    present = storage.exists(bucket=NimbusBucketType(bucket_type.lower()), project=project, key=key)
-    click.echo("yes" if present else "no")
-    if not present:
-        sys.exit(1)
-
-
-@main.command("rm", help="Delete an object.")
-@click.argument("bucket_type", type=BUCKET_TYPE_CHOICE)
-@click.argument("project", type=str)
-@click.argument("key", type=str)
-def rm_command(bucket_type: str, project: str, key: str) -> None:
-    storage = _build_storage()
-    storage.delete(bucket=NimbusBucketType(bucket_type.lower()), project=project, key=key)
-    click.echo(f"deleted {project}/{key}")
-
-
-@main.command("presign", help="Generate a presigned URL for an object.")
-@click.argument("bucket_type", type=BUCKET_TYPE_CHOICE)
-@click.argument("project", type=str)
-@click.argument("key", type=str)
-@click.option(
-    "--expires",
-    "expires_in",
-    type=int,
-    default=DEFAULT_PRESIGN_EXPIRES_IN,
-    show_default=True,
-    help="Lifetime of the URL in seconds.",
-)
-def presign_command(bucket_type: str, project: str, key: str, expires_in: int) -> None:
-    storage = _build_storage()
-    url = storage.presigned_url(
-        bucket=NimbusBucketType(bucket_type.lower()),
-        project=project,
-        key=key,
-        expires_in=expires_in,
-    )
-    click.echo(url)
-
-
-def run(argv: Sequence[str] | None = None) -> int:
+@app.command("ls", context_settings=CONTEXT_SETTINGS)
+def list_keys(
+    bucket_type: BucketArg,
+    project: ProjectArg,
+    key_prefix: Annotated[
+        str,
+        typer.Argument(help="Optional key prefix to filter by.", show_default=False),
+    ] = "",
+) -> None:
     """
-    Programmatic entry point that catches NimbusError and turns it into a
-    non-zero exit code with a clean message (used by tests and embedders).
+    List keys under a project (optionally filtered by key prefix).
+    """
+    storage = _build_storage()
+    for object_key in storage.list_keys(bucket=bucket_type, project=project, key_prefix=key_prefix):
+        console.print(object_key)
+
+
+@app.command(context_settings=CONTEXT_SETTINGS)
+def exists(bucket_type: BucketArg, project: ProjectArg, key: KeyArg) -> None:
+    """
+    Check whether an object exists (exits 0 if yes, 1 if no).
+    """
+    storage = _build_storage()
+    present = storage.exists(bucket=bucket_type, project=project, key=key)
+    if present:
+        console.print("[green]yes[/green]")
+        raise typer.Exit(code=0)
+    console.print("[yellow]no[/yellow]")
+    raise typer.Exit(code=1)
+
+
+@app.command("rm", context_settings=CONTEXT_SETTINGS)
+def remove(bucket_type: BucketArg, project: ProjectArg, key: KeyArg) -> None:
+    """
+    Delete an object.
+    """
+    storage = _build_storage()
+    storage.delete(bucket=bucket_type, project=project, key=key)
+    console.print(f"[green]deleted[/green] {project}/{key}")
+
+
+@app.command("purge-test-bucket", context_settings=CONTEXT_SETTINGS)
+def purge_test_bucket(
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip the confirmation prompt."),
+    ] = False,
+) -> None:
+    """
+    Delete [bold red]every object[/bold red] in the test bucket.
+
+    Hardcoded to NimbusBucketType.TEST — cannot be used against any other
+    bucket. Useful for clearing accumulated integration-test or smoke-test
+    artifacts between runs.
+    """
+    storage = _build_storage()
+    bucket_name = storage.config.bucket_name(NimbusBucketType.TEST)
+    if not yes:
+        confirmed = typer.confirm(f"Delete every object in {bucket_name}?", default=False)
+        if not confirmed:
+            console.print("[yellow]aborted[/yellow]")
+            raise typer.Exit(code=1)
+    deleted = storage.purge_test_bucket()
+    console.print(f"[green]deleted[/green] {deleted} object(s) from {bucket_name}")
+
+
+@app.command(context_settings=CONTEXT_SETTINGS)
+def presign(
+    bucket_type: BucketArg,
+    project: ProjectArg,
+    key: KeyArg,
+    expires: Annotated[
+        int,
+        typer.Option("--expires", help="Lifetime of the URL in seconds."),
+    ] = DEFAULT_PRESIGN_EXPIRES_IN,
+) -> None:
+    """
+    Generate a presigned URL for an object.
+    """
+    storage = _build_storage()
+    url = storage.presigned_url(bucket=bucket_type, project=project, key=key, expires_in=expires)
+    console.print(url, soft_wrap=True, highlight=False)
+
+
+def main() -> int:
+    """
+    Entry point used by the console script.
+
+    Catches NimbusError so credential / config / storage failures produce a
+    clean message and a non-zero exit code instead of a traceback. Also
+    catches click's Exit (raised by --help and no_args_is_help) and
+    UsageError (raised by bad arguments) so they exit cleanly without a
+    Rich traceback.
     """
     try:
-        main.main(args=list(argv) if argv is not None else None, standalone_mode=False)
-    except click.ClickException as exc:
+        app(standalone_mode=False)
+    except NimbusObjectNotFoundError as exc:
+        error_console.print(f"not found: {exc}")
+        return 2
+    except NimbusError as exc:
+        error_console.print(f"error: {exc}")
+        return 1
+    except click.exceptions.UsageError as exc:
         exc.show()
         return exc.exit_code
-    except NimbusError as exc:
-        click.echo(f"error: {exc}", err=True)
-        return 1
+    except click.exceptions.Exit as exc:
+        return int(exc.exit_code)
     except SystemExit as exc:
         return int(exc.code) if isinstance(exc.code, int) else (0 if exc.code is None else 1)
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(run())
+    sys.exit(main())

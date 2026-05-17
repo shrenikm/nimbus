@@ -15,11 +15,12 @@ class NimbusBucketType(StrEnum):
     """
     Categories of data nimbus knows how to address.
 
-    These are intentionally generic ML-data categories. Downstream users
-    with different category names may pass raw strings to the API; nothing
-    in nimbus assumes the taxonomy is exhaustive.
+    The first three are intentionally generic ML-data categories. TEST is
+    reserved for integration testing and is the only bucket the test suite
+    is ever permitted to write to or read from.
     """
 
     RAW_DATA = "raw-data"
     DATASETS = "datasets"
     CHECKPOINTS = "checkpoints"
+    TEST = "test"
