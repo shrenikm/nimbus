@@ -10,7 +10,7 @@ from nimbus.bucket import NimbusBucketType
 from nimbus.cli import main
 from nimbus.config import NimbusCloudConfig
 from nimbus.storage import NimbusCloudStorage
-from tests.conftest import TEST_BUCKET_PREFIX, TEST_REGION
+from tests.conftest import TEST_REGION
 
 PROJECT = "my-project"
 
@@ -24,7 +24,6 @@ def cli_env(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("R2_ENDPOINT_URL", "https://s3.amazonaws.com")
     monkeypatch.setenv("R2_ACCESS_KEY_ID", "testing")
     monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "testing")
-    monkeypatch.setenv("NIMBUS_BUCKET_PREFIX", TEST_BUCKET_PREFIX)
 
 
 @pytest.fixture
@@ -38,7 +37,6 @@ def cli_storage(mocked_s3: None, cli_env: None) -> NimbusCloudStorage:
         endpoint_url="https://s3.amazonaws.com",
         access_key_id="testing",
         secret_access_key="testing",
-        bucket_prefix=TEST_BUCKET_PREFIX,
         region=TEST_REGION,
     )
     cs = NimbusCloudStorage(config)

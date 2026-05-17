@@ -28,7 +28,6 @@ ENV_ENDPOINT_URL = "R2_ENDPOINT_URL"
 ENV_ACCOUNT_ID = "R2_ACCOUNT_ID"
 ENV_ACCESS_KEY_ID = "R2_ACCESS_KEY_ID"
 ENV_SECRET_ACCESS_KEY = "R2_SECRET_ACCESS_KEY"
-ENV_BUCKET_PREFIX = "NIMBUS_BUCKET_PREFIX"
 ENV_BUCKET_OVERRIDE_PREFIX = "NIMBUS_BUCKET_"
 
 
@@ -101,8 +100,6 @@ class NimbusCloudConfig:
         if not secret_access_key:
             raise NimbusConfigError(f"missing environment variable: {ENV_SECRET_ACCESS_KEY}")
 
-        bucket_prefix = os.environ.get(ENV_BUCKET_PREFIX, "").strip() or DEFAULT_BUCKET_PREFIX
-
         overrides: dict[NimbusBucketType, str] = {}
         for bucket_type in NimbusBucketType:
             env_name = ENV_BUCKET_OVERRIDE_PREFIX + bucket_type.name
@@ -114,7 +111,6 @@ class NimbusCloudConfig:
             endpoint_url=endpoint_url,
             access_key_id=access_key_id,
             secret_access_key=secret_access_key,
-            bucket_prefix=bucket_prefix,
             bucket_overrides=overrides,
         )
 

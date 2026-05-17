@@ -17,7 +17,6 @@ from nimbus.bucket import NimbusBucketType
 from nimbus.config import NimbusCloudConfig
 from nimbus.storage import NimbusCloudStorage
 
-TEST_BUCKET_PREFIX = "test-nimbus"
 TEST_REGION = "us-east-1"
 
 
@@ -56,14 +55,13 @@ def mocked_s3(aws_credentials: None) -> Iterator[None]:
 @pytest.fixture
 def cloud_config() -> NimbusCloudConfig:
     """
-    A NimbusCloudConfig wired up for moto: us-east-1 region (so create_bucket
-    doesn't require a LocationConstraint) and a unique prefix.
+    A NimbusCloudConfig wired up for moto: us-east-1 region so create_bucket
+    doesn't require a LocationConstraint.
     """
     return NimbusCloudConfig(
         endpoint_url="https://s3.amazonaws.com",
         access_key_id="testing",
         secret_access_key="testing",
-        bucket_prefix=TEST_BUCKET_PREFIX,
         region=TEST_REGION,
     )
 

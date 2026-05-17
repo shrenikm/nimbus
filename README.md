@@ -37,18 +37,17 @@ full list. The minimum required vars:
 | `R2_ACCESS_KEY_ID`      | Access key.                                              |
 | `R2_SECRET_ACCESS_KEY`  | Secret key.                                              |
 
-Optional:
+Optional per-bucket overrides:
 
-| Variable                       | Default   | Purpose                                                |
-|--------------------------------|-----------|--------------------------------------------------------|
-| `NIMBUS_BUCKET_PREFIX`         | `nimbus`  | Combined with each `NimbusBucketType` value to form a name.  |
-| `NIMBUS_BUCKET_RAW_DATA`       | —         | Override bucket name for the `raw-data` category.      |
-| `NIMBUS_BUCKET_DATASETS`       | —         | Override bucket name for the `datasets` category.      |
-| `NIMBUS_BUCKET_CHECKPOINTS`    | —         | Override bucket name for the `checkpoints` category.   |
+| Variable                       | Purpose                                              |
+|--------------------------------|------------------------------------------------------|
+| `NIMBUS_BUCKET_RAW_DATA`       | Override bucket name for the `raw-data` category.    |
+| `NIMBUS_BUCKET_DATASETS`       | Override bucket name for the `datasets` category.    |
+| `NIMBUS_BUCKET_CHECKPOINTS`    | Override bucket name for the `checkpoints` category. |
 
-With the default prefix, the three buckets resolve to:
-`nimbus-raw-data`, `nimbus-datasets`, `nimbus-checkpoints`. Buckets must
-already exist on the provider — nimbus does not create or delete buckets.
+By default the three buckets are named `nimbus-raw-data`, `nimbus-datasets`,
+and `nimbus-checkpoints`. Buckets must already exist on the provider —
+nimbus does not create or delete buckets.
 
 All buckets are expected to be private. Nimbus never enables public access
 or generates public links; use presigned URLs for short-lived sharing.

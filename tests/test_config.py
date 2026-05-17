@@ -144,13 +144,6 @@ class TestFromEnv:
         config = NimbusCloudConfig.from_env()
         assert config.endpoint_url == "https://explicit.example.com"
 
-    def test_custom_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        self._setup_required(monkeypatch)
-        monkeypatch.setenv("NIMBUS_BUCKET_PREFIX", "shrenik")
-        config = NimbusCloudConfig.from_env()
-        assert config.bucket_prefix == "shrenik"
-        assert config.bucket_name(NimbusBucketType.DATASETS) == "shrenik-datasets"
-
     def test_per_type_overrides(self, monkeypatch: pytest.MonkeyPatch) -> None:
         self._setup_required(monkeypatch)
         monkeypatch.setenv("NIMBUS_BUCKET_CHECKPOINTS", "my-ckpts")
