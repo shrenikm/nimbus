@@ -282,6 +282,34 @@ class NimbusCloudStorage:
         except ClientError as exc:
             raise NimbusStorageError(f"delete failed for s3://{bucket_name}/{object_key}: {exc}") from exc
 
+    def purge_test_bucket(self) -> int:
+        """
+        Delete every object in the TEST bucket, across every project namespace.
+        Returns the number of objects deleted.
+
+        Hardcoded to NimbusBucketType.TEST. There is intentionally no way to
+        point this method at any other bucket — bulk deletion against
+        raw-data, datasets, or checkpoints is not exposed by this package.
+        """
+        bucket_name = self.config.bucket_name(NimbusBucketType.TEST)
+        paginator = self._client.get_paginator("list_objects_v2")
+        deleted = 0
+        try:
+            for page in paginator.paginate(Bucket=bucket_name):
+                contents = page.get("Contents", []) or []
+                if not contents:
+                    continue
+                # delete_objects accepts up to 1000 keys per call, which matches the paginator's default page size.
+                objects = [{"Key": obj["Key"]} for obj in contents]
+                self._client.delete_objects(
+                    Bucket=bucket_name,
+                    Delete={"Objects": objects, "Quiet": True},
+                )
+                deleted += len(objects)
+        except ClientError as exc:
+            raise NimbusStorageError(f"bulk delete failed for s3://{bucket_name}: {exc}") from exc
+        return deleted
+
     def presigned_url(
         self,
         *,

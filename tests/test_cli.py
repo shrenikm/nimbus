@@ -148,6 +148,91 @@ def test_no_args_shows_help(runner: CliRunner) -> None:
     assert "download" in result.output
 
 
+def test_purge_test_bucket_with_yes_flag(runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path) -> None:
+    src = tmp_path / "src.bin"
+    src.write_bytes(b"x")
+    for key in ("a.bin", "nested/b.bin", "c.bin"):
+        cli_storage.upload_file(
+            bucket=NimbusBucketType.TEST,
+            project="smoke",
+            key=key,
+            local_path=src,
+            show_progress=False,
+        )
+
+    result = runner.invoke(app, ["purge-test-bucket", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert "deleted 3 object(s)" in result.output
+    assert list(cli_storage.list_keys(bucket=NimbusBucketType.TEST, project="smoke")) == []
+
+
+def test_purge_test_bucket_confirmation_decline(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
+    src = tmp_path / "src.bin"
+    src.write_bytes(b"x")
+    cli_storage.upload_file(
+        bucket=NimbusBucketType.TEST,
+        project="smoke",
+        key="keep.bin",
+        local_path=src,
+        show_progress=False,
+    )
+
+    result = runner.invoke(app, ["purge-test-bucket"], input="n\n")
+
+    assert result.exit_code == 1
+    assert "aborted" in result.output
+    assert cli_storage.exists(bucket=NimbusBucketType.TEST, project="smoke", key="keep.bin")
+
+
+def test_purge_test_bucket_confirmation_accept(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
+    src = tmp_path / "src.bin"
+    src.write_bytes(b"x")
+    cli_storage.upload_file(
+        bucket=NimbusBucketType.TEST,
+        project="smoke",
+        key="doomed.bin",
+        local_path=src,
+        show_progress=False,
+    )
+
+    result = runner.invoke(app, ["purge-test-bucket"], input="y\n")
+
+    assert result.exit_code == 0, result.output
+    assert "deleted 1 object(s)" in result.output
+    assert not cli_storage.exists(bucket=NimbusBucketType.TEST, project="smoke", key="doomed.bin")
+
+
+def test_purge_test_bucket_does_not_touch_other_buckets(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
+    src = tmp_path / "src.bin"
+    src.write_bytes(b"x")
+    cli_storage.upload_file(
+        bucket=NimbusBucketType.CHECKPOINTS,
+        project=PROJECT,
+        key="protected.bin",
+        local_path=src,
+        show_progress=False,
+    )
+    cli_storage.upload_file(
+        bucket=NimbusBucketType.TEST,
+        project="smoke",
+        key="doomed.bin",
+        local_path=src,
+        show_progress=False,
+    )
+
+    result = runner.invoke(app, ["purge-test-bucket", "--yes"])
+
+    assert result.exit_code == 0
+    assert cli_storage.exists(bucket=NimbusBucketType.CHECKPOINTS, project=PROJECT, key="protected.bin")
+
+
 def test_os_environ_does_not_leak_secret_into_output(
     runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
 ) -> None:

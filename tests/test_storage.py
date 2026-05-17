@@ -266,6 +266,50 @@ class TestListExistsDelete:
         storage.delete(bucket=NimbusBucketType.DATASETS, project=PROJECT, key="never-existed.bin")
 
 
+class TestPurgeTestBucket:
+    def _upload_to_test(self, storage: NimbusCloudStorage, tmp_path: Path, *, project: str, key: str) -> None:
+        path = tmp_path / "u.bin"
+        path.write_bytes(b"x")
+        storage.upload_file(
+            bucket=NimbusBucketType.TEST,
+            project=project,
+            key=key,
+            local_path=path,
+            show_progress=False,
+        )
+
+    def test_clears_objects_across_projects(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        self._upload_to_test(storage, tmp_path, project="proj-a", key="one.bin")
+        self._upload_to_test(storage, tmp_path, project="proj-a", key="nested/two.bin")
+        self._upload_to_test(storage, tmp_path, project="proj-b", key="three.bin")
+
+        deleted = storage.purge_test_bucket()
+
+        assert deleted == 3
+        assert list(storage.list_keys(bucket=NimbusBucketType.TEST, project="proj-a")) == []
+        assert list(storage.list_keys(bucket=NimbusBucketType.TEST, project="proj-b")) == []
+
+    def test_empty_test_bucket_returns_zero(self, storage: NimbusCloudStorage) -> None:
+        assert storage.purge_test_bucket() == 0
+
+    def test_does_not_touch_other_buckets(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        src = tmp_path / "keep.bin"
+        src.write_bytes(b"keep me")
+        storage.upload_file(
+            bucket=NimbusBucketType.CHECKPOINTS,
+            project=PROJECT,
+            key="should-survive.bin",
+            local_path=src,
+            show_progress=False,
+        )
+        self._upload_to_test(storage, tmp_path, project="proj-a", key="doomed.bin")
+
+        storage.purge_test_bucket()
+
+        assert storage.exists(bucket=NimbusBucketType.CHECKPOINTS, project=PROJECT, key="should-survive.bin")
+        assert not list(storage.list_keys(bucket=NimbusBucketType.TEST, project="proj-a"))
+
+
 class TestPresignedUrl:
     def test_returns_url_with_bucket_and_key(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         src = tmp_path / "presign.bin"

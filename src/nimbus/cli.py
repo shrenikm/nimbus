@@ -164,6 +164,31 @@ def remove(bucket_type: BucketArg, project: ProjectArg, key: KeyArg) -> None:
     console.print(f"[green]deleted[/green] {project}/{key}")
 
 
+@app.command("purge-test-bucket", context_settings=CONTEXT_SETTINGS)
+def purge_test_bucket(
+    yes: Annotated[
+        bool,
+        typer.Option("--yes", "-y", help="Skip the confirmation prompt."),
+    ] = False,
+) -> None:
+    """
+    Delete [bold red]every object[/bold red] in the test bucket.
+
+    Hardcoded to NimbusBucketType.TEST — cannot be used against any other
+    bucket. Useful for clearing accumulated integration-test or smoke-test
+    artifacts between runs.
+    """
+    storage = _build_storage()
+    bucket_name = storage.config.bucket_name(NimbusBucketType.TEST)
+    if not yes:
+        confirmed = typer.confirm(f"Delete every object in {bucket_name}?", default=False)
+        if not confirmed:
+            console.print("[yellow]aborted[/yellow]")
+            raise typer.Exit(code=1)
+    deleted = storage.purge_test_bucket()
+    console.print(f"[green]deleted[/green] {deleted} object(s) from {bucket_name}")
+
+
 @app.command(context_settings=CONTEXT_SETTINGS)
 def presign(
     bucket_type: BucketArg,
