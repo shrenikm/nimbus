@@ -27,7 +27,8 @@ dependencies = [
     "attrs==26.1.0",
     "tqdm==4.67.3",
     "python-dotenv==1.2.2",
-    "click==8.4.0",
+    "typer==0.25.1",
+    "rich==15.0.0",
 ]
 
 [project.optional-dependencies]

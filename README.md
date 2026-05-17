@@ -153,6 +153,14 @@ nimbus presign datasets shared my-dataset-v1/sample.parquet --expires 7200
 
 `nimbus exists` exits 0 when the object is present and 1 when it is not.
 
+Help is available via `-h` or `--help` at any level:
+
+```
+nimbus              # bare invocation shows the top-level help
+nimbus -h
+nimbus upload -h
+```
+
 ## Transfer defaults
 
 Uploads and downloads use the following `boto3` `TransferConfig`:

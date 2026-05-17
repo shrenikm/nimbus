@@ -21,13 +21,16 @@ TEST_REGION = "us-east-1"
 
 
 @pytest.fixture(autouse=True)
-def _clear_nimbus_env(monkeypatch: pytest.MonkeyPatch) -> None:
+def _isolate_nimbus_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Strip every R2_/NIMBUS_ env var so each test starts from a known state.
+    Strip every R2_/NIMBUS_ env var and disable .env loading so each test
+    starts from a known, hermetic state — even if the developer has a real
+    .env file in the project root.
     """
     for key in list(os.environ):
         if key.startswith(("R2_", "NIMBUS_")):
             monkeypatch.delenv(key, raising=False)
+    monkeypatch.setattr("nimbus.config.load_dotenv", lambda *a, **kw: False)
 
 
 @pytest.fixture
