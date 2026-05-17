@@ -16,9 +16,12 @@ NimbusBucketType.CHECKPOINTS   # "checkpoints"  → bucket nimbus-checkpoints
 NimbusBucketType.TEST          # "test"         → bucket nimbus-test
 ```
 
-Bucket names are derived from the enum value as `{prefix}-{value}` with
-`prefix="nimbus"`. The names are fixed by the package — there is no env
-variable to override them.
+By default, bucket names are derived from the enum value as
+`{prefix}-{value}` with `prefix="nimbus"`. Each can be replaced with an
+arbitrary full bucket name via env var — see [Per-bucket name
+overrides](getting-started.md#per-bucket-name-overrides) for the four
+variables (`NIMBUS_BUCKET_RAW_DATA`, etc.). Overrides are full names,
+not suffixes — the `nimbus-` prefix is *not* prepended.
 
 `NimbusBucketType` is a `StrEnum`, so every API call also accepts the raw
 string form (`"checkpoints"` is interchangeable with
@@ -44,10 +47,14 @@ buckets can be lifecycled and budgeted independently on the provider side
 and any ad-hoc smoke testing you do. The package exposes one bulk-delete
 operation, [`purge_test_bucket()`][nimbus.storage.NimbusCloudStorage.purge_test_bucket],
 which is **hardcoded to TEST** at the API level — it accepts no `bucket`
-argument and cannot be aimed at any other category.
+argument and cannot be aimed at any other category. This is deliberate:
+there's no syntactic way to accidentally nuke `nimbus-checkpoints` from
+a script.
 
-This is deliberate: it means there's no syntactic way to accidentally
-nuke `nimbus-checkpoints` from a script.
+If you override `NIMBUS_BUCKET_TEST` to point at a custom bucket,
+`purge_test_bucket()` will operate on *that* bucket. The safety guarantee
+is "only the bucket type you've configured as TEST", not "literally the
+bucket named nimbus-test".
 
 ## Key composition
 

@@ -31,9 +31,11 @@ Only what `src/nimbus/__init__.py` exports is public. Everything else (env-name 
 - Reserved for integration tests. The integration test file hardcodes it; do not add an env knob to redirect.
 - `NimbusCloudStorage.purge_test_bucket()` takes no `bucket` argument **on purpose**. The safety guarantee is that bulk deletion can never be aimed at `raw-data`, `datasets`, or `checkpoints`. Do not relax this signature or add a generic bulk-delete method.
 
-## Bucket names are fixed
+## Bucket naming
 
-Final bucket names are always `{bucket_prefix}-{bucket_type.value}`, with `bucket_prefix` defaulting to `"nimbus"`.
+Default bucket name for each `NimbusBucketType` is `{bucket_prefix}-{bucket_type.value}` with `bucket_prefix="nimbus"`. Each can be overridden with a per-type env var that supplies the **full bucket name** (not a suffix): `NIMBUS_BUCKET_RAW_DATA`, `NIMBUS_BUCKET_DATASETS`, `NIMBUS_BUCKET_CHECKPOINTS`, `NIMBUS_BUCKET_TEST`. The prefix itself is intentionally NOT env-configurable — don't add `NIMBUS_BUCKET_PREFIX`. If someone wants a non-`nimbus-` prefix, they set the per-type overrides.
+
+`purge_test_bucket()` operates on whatever `NimbusBucketType.TEST` resolves to, including after an override. The safety guarantee is "only the bucket type configured as TEST", not "literally `nimbus-test`".
 
 ## Test architecture
 

@@ -60,9 +60,24 @@ the current working directory is loaded automatically.
 | `R2_SECRET_ACCESS_KEY`   | yes      | Matching secret.                                       |
 | `NIMBUS_INTEGRATION_TESTS` | no     | Set to `1` to enable the opt-in integration suite.     |
 
-The bucket names themselves (`nimbus-raw-data`, `nimbus-datasets`,
-`nimbus-checkpoints`, `nimbus-test`) are fixed by the package — no env
-variable overrides.
+### Per-bucket name overrides
+
+By default each `NimbusBucketType` resolves to `nimbus-<value>`
+(`nimbus-raw-data`, `nimbus-datasets`, `nimbus-checkpoints`,
+`nimbus-test`). You can replace any of those with a full bucket name of
+your choice via env vars:
+
+| Variable                       | Replaces default for |
+|--------------------------------|----------------------|
+| `NIMBUS_BUCKET_RAW_DATA`       | `raw-data`           |
+| `NIMBUS_BUCKET_DATASETS`       | `datasets`           |
+| `NIMBUS_BUCKET_CHECKPOINTS`    | `checkpoints`        |
+| `NIMBUS_BUCKET_TEST`           | `test`               |
+
+The value is the **full bucket name**, not a suffix — `nimbus-` is not
+prepended to overrides. The bucket *prefix* itself isn't separately
+configurable; if you want a non-`nimbus-` prefix, set the per-bucket
+overrides for the ones you care about.
 
 Example `.env`:
 
