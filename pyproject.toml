@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools==80.9.0", "wheel==0.45.1"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling==1.29.0"]
+build-backend = "hatchling.build"
 
 [project]
 name = "nimbus"
@@ -46,11 +46,18 @@ nimbus = "nimbus.cli:main"
 Homepage = "https://github.com/shrenikm/nimbus"
 Issues = "https://github.com/shrenikm/nimbus/issues"
 
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.hatch.build.targets.wheel]
+packages = ["src/nimbus"]
 
-[tool.setuptools.package-data]
-nimbus = ["py.typed"]
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/nimbus",
+    "tests",
+    "README.md",
+    "LICENSE",
+    ".env.example",
+    "pyproject.toml",
+]
 
 [tool.ruff]
 line-length = 100

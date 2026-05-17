@@ -11,17 +11,17 @@ from collections.abc import Sequence
 
 import click
 
-from nimbus.bucket import BucketType
-from nimbus.config import CloudConfig
+from nimbus.bucket import NimbusBucketType
+from nimbus.config import NimbusCloudConfig
 from nimbus.exceptions import NimbusError
-from nimbus.storage import DEFAULT_PRESIGN_EXPIRES_IN, CloudStorage
+from nimbus.storage import DEFAULT_PRESIGN_EXPIRES_IN, NimbusCloudStorage
 
-BUCKET_TYPE_VALUES: tuple[str, ...] = tuple(b.value for b in BucketType)
+BUCKET_TYPE_VALUES: tuple[str, ...] = tuple(b.value for b in NimbusBucketType)
 BUCKET_TYPE_CHOICE = click.Choice(BUCKET_TYPE_VALUES, case_sensitive=False)
 
 
-def _build_storage() -> CloudStorage:
-    return CloudStorage(CloudConfig.from_env())
+def _build_storage() -> NimbusCloudStorage:
+    return NimbusCloudStorage(NimbusCloudConfig.from_env())
 
 
 @click.group(
@@ -48,13 +48,13 @@ def upload_command(
 ) -> None:
     storage = _build_storage()
     object_key = storage.upload_file(
-        bucket=BucketType(bucket_type.lower()),
+        bucket=NimbusBucketType(bucket_type.lower()),
         project=project,
         key=key,
         local_path=local_path,
         show_progress=not no_progress,
     )
-    bucket_name = storage.config.bucket_name(BucketType(bucket_type.lower()))
+    bucket_name = storage.config.bucket_name(NimbusBucketType(bucket_type.lower()))
     click.echo(f"uploaded s3://{bucket_name}/{object_key}")
 
 
@@ -69,7 +69,7 @@ def download_command(
 ) -> None:
     storage = _build_storage()
     destination = storage.download_file(
-        bucket=BucketType(bucket_type.lower()),
+        bucket=NimbusBucketType(bucket_type.lower()),
         project=project,
         key=key,
         local_path=local_path,
@@ -85,7 +85,7 @@ def download_command(
 def ls_command(bucket_type: str, project: str, key_prefix: str) -> None:
     storage = _build_storage()
     keys = storage.list_keys(
-        bucket=BucketType(bucket_type.lower()), project=project, key_prefix=key_prefix
+        bucket=NimbusBucketType(bucket_type.lower()), project=project, key_prefix=key_prefix
     )
     for object_key in keys:
         click.echo(object_key)
@@ -97,7 +97,7 @@ def ls_command(bucket_type: str, project: str, key_prefix: str) -> None:
 @click.argument("key", type=str)
 def exists_command(bucket_type: str, project: str, key: str) -> None:
     storage = _build_storage()
-    present = storage.exists(bucket=BucketType(bucket_type.lower()), project=project, key=key)
+    present = storage.exists(bucket=NimbusBucketType(bucket_type.lower()), project=project, key=key)
     click.echo("yes" if present else "no")
     if not present:
         sys.exit(1)
@@ -109,7 +109,7 @@ def exists_command(bucket_type: str, project: str, key: str) -> None:
 @click.argument("key", type=str)
 def rm_command(bucket_type: str, project: str, key: str) -> None:
     storage = _build_storage()
-    storage.delete(bucket=BucketType(bucket_type.lower()), project=project, key=key)
+    storage.delete(bucket=NimbusBucketType(bucket_type.lower()), project=project, key=key)
     click.echo(f"deleted {project}/{key}")
 
 
@@ -128,7 +128,7 @@ def rm_command(bucket_type: str, project: str, key: str) -> None:
 def presign_command(bucket_type: str, project: str, key: str, expires_in: int) -> None:
     storage = _build_storage()
     url = storage.presigned_url(
-        bucket=BucketType(bucket_type.lower()),
+        bucket=NimbusBucketType(bucket_type.lower()),
         project=project,
         key=key,
         expires_in=expires_in,

@@ -13,9 +13,9 @@ from collections.abc import Iterator
 import pytest
 from moto import mock_aws
 
-from nimbus.bucket import BucketType
-from nimbus.config import CloudConfig
-from nimbus.storage import CloudStorage
+from nimbus.bucket import NimbusBucketType
+from nimbus.config import NimbusCloudConfig
+from nimbus.storage import NimbusCloudStorage
 
 TEST_BUCKET_PREFIX = "test-nimbus"
 TEST_REGION = "us-east-1"
@@ -54,12 +54,12 @@ def mocked_s3(aws_credentials: None) -> Iterator[None]:
 
 
 @pytest.fixture
-def cloud_config() -> CloudConfig:
+def cloud_config() -> NimbusCloudConfig:
     """
-    A CloudConfig wired up for moto: us-east-1 region (so create_bucket
+    A NimbusCloudConfig wired up for moto: us-east-1 region (so create_bucket
     doesn't require a LocationConstraint) and a unique prefix.
     """
-    return CloudConfig(
+    return NimbusCloudConfig(
         endpoint_url="https://s3.amazonaws.com",
         access_key_id="testing",
         secret_access_key="testing",
@@ -69,11 +69,11 @@ def cloud_config() -> CloudConfig:
 
 
 @pytest.fixture
-def storage(mocked_s3: None, cloud_config: CloudConfig) -> CloudStorage:
+def storage(mocked_s3: None, cloud_config: NimbusCloudConfig) -> NimbusCloudStorage:
     """
-    A CloudStorage with all three default buckets pre-created in moto.
+    A NimbusCloudStorage with all three default buckets pre-created in moto.
     """
-    cs = CloudStorage(cloud_config)
-    for bucket_type in BucketType:
+    cs = NimbusCloudStorage(cloud_config)
+    for bucket_type in NimbusBucketType:
         cs.client.create_bucket(Bucket=cloud_config.bucket_name(bucket_type))
     return cs

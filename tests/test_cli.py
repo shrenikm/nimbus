@@ -6,10 +6,10 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from nimbus.bucket import BucketType
+from nimbus.bucket import NimbusBucketType
 from nimbus.cli import main
-from nimbus.config import CloudConfig
-from nimbus.storage import CloudStorage
+from nimbus.config import NimbusCloudConfig
+from nimbus.storage import NimbusCloudStorage
 from tests.conftest import TEST_BUCKET_PREFIX, TEST_REGION
 
 PROJECT = "my-project"
@@ -18,7 +18,7 @@ PROJECT = "my-project"
 @pytest.fixture
 def cli_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """
-    Populate the env vars CloudConfig.from_env() expects so the CLI can
+    Populate the env vars NimbusCloudConfig.from_env() expects so the CLI can
     construct a config without a .env file.
     """
     monkeypatch.setenv("R2_ENDPOINT_URL", "https://s3.amazonaws.com")
@@ -33,22 +33,22 @@ def runner() -> CliRunner:
 
 
 @pytest.fixture
-def cli_storage(mocked_s3: None, cli_env: None) -> CloudStorage:
-    config = CloudConfig(
+def cli_storage(mocked_s3: None, cli_env: None) -> NimbusCloudStorage:
+    config = NimbusCloudConfig(
         endpoint_url="https://s3.amazonaws.com",
         access_key_id="testing",
         secret_access_key="testing",
         bucket_prefix=TEST_BUCKET_PREFIX,
         region=TEST_REGION,
     )
-    cs = CloudStorage(config)
-    for bucket_type in BucketType:
+    cs = NimbusCloudStorage(config)
+    for bucket_type in NimbusBucketType:
         cs.client.create_bucket(Bucket=config.bucket_name(bucket_type))
     return cs
 
 
 def test_upload_then_ls_then_download(
-    runner: CliRunner, cli_storage: CloudStorage, tmp_path: Path
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
 ) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"hello")
@@ -87,11 +87,13 @@ def test_upload_then_ls_then_download(
     assert dest.read_bytes() == b"hello"
 
 
-def test_exists_exit_codes(runner: CliRunner, cli_storage: CloudStorage, tmp_path: Path) -> None:
+def test_exists_exit_codes(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"x")
     cli_storage.upload_file(
-        bucket=BucketType.CHECKPOINTS,
+        bucket=NimbusBucketType.CHECKPOINTS,
         project=PROJECT,
         key="present.bin",
         local_path=src,
@@ -106,11 +108,13 @@ def test_exists_exit_codes(runner: CliRunner, cli_storage: CloudStorage, tmp_pat
     assert "no" in no.output
 
 
-def test_rm_removes_object(runner: CliRunner, cli_storage: CloudStorage, tmp_path: Path) -> None:
+def test_rm_removes_object(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"x")
     cli_storage.upload_file(
-        bucket=BucketType.CHECKPOINTS,
+        bucket=NimbusBucketType.CHECKPOINTS,
         project=PROJECT,
         key="doomed.bin",
         local_path=src,
@@ -118,14 +122,18 @@ def test_rm_removes_object(runner: CliRunner, cli_storage: CloudStorage, tmp_pat
     )
     result = runner.invoke(main, ["rm", "checkpoints", PROJECT, "doomed.bin"])
     assert result.exit_code == 0
-    assert not cli_storage.exists(bucket=BucketType.CHECKPOINTS, project=PROJECT, key="doomed.bin")
+    assert not cli_storage.exists(
+        bucket=NimbusBucketType.CHECKPOINTS, project=PROJECT, key="doomed.bin"
+    )
 
 
-def test_presign_outputs_url(runner: CliRunner, cli_storage: CloudStorage, tmp_path: Path) -> None:
+def test_presign_outputs_url(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"x")
     cli_storage.upload_file(
-        bucket=BucketType.DATASETS,
+        bucket=NimbusBucketType.DATASETS,
         project=PROJECT,
         key="a.bin",
         local_path=src,
@@ -153,7 +161,7 @@ def test_help_lists_all_commands(runner: CliRunner) -> None:
 
 
 def test_os_environ_does_not_leak_secret_into_output(
-    runner: CliRunner, cli_storage: CloudStorage, tmp_path: Path
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
 ) -> None:
     secret = os.environ["R2_SECRET_ACCESS_KEY"]
     src = tmp_path / "src.bin"

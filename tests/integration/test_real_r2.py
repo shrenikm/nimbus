@@ -18,15 +18,15 @@ from pathlib import Path
 
 import pytest
 
-from nimbus.bucket import BucketType
-from nimbus.config import CloudConfig
-from nimbus.storage import CloudStorage
+from nimbus.bucket import NimbusBucketType
+from nimbus.config import NimbusCloudConfig
+from nimbus.storage import NimbusCloudStorage
 
 ENV_ENABLE = "NIMBUS_INTEGRATION_TESTS"
 ENV_BUCKET_TYPE = "NIMBUS_INTEGRATION_BUCKET_TYPE"
 ENV_PROJECT = "NIMBUS_INTEGRATION_PROJECT"
 
-DEFAULT_BUCKET_TYPE = BucketType.CHECKPOINTS
+DEFAULT_BUCKET_TYPE = NimbusBucketType.CHECKPOINTS
 DEFAULT_PROJECT = "integration-tests"
 
 pytestmark = [
@@ -39,15 +39,15 @@ pytestmark = [
 
 
 @pytest.fixture(scope="module")
-def storage() -> CloudStorage:
-    config = CloudConfig.from_env()
-    return CloudStorage(config)
+def storage() -> NimbusCloudStorage:
+    config = NimbusCloudConfig.from_env()
+    return NimbusCloudStorage(config)
 
 
 @pytest.fixture
-def bucket_type() -> BucketType:
+def bucket_type() -> NimbusBucketType:
     raw = os.environ.get(ENV_BUCKET_TYPE, DEFAULT_BUCKET_TYPE.value)
-    return BucketType(raw)
+    return NimbusBucketType(raw)
 
 
 @pytest.fixture
@@ -56,7 +56,9 @@ def project() -> str:
 
 
 @pytest.fixture
-def unique_key(storage: CloudStorage, bucket_type: BucketType, project: str) -> Iterator[str]:
+def unique_key(
+    storage: NimbusCloudStorage, bucket_type: NimbusBucketType, project: str
+) -> Iterator[str]:
     """
     Yield a unique key for the test and best-effort delete it afterward.
     """
@@ -69,8 +71,8 @@ def unique_key(storage: CloudStorage, bucket_type: BucketType, project: str) -> 
 
 
 def test_upload_exists_list_presign_download_delete_round_trip(
-    storage: CloudStorage,
-    bucket_type: BucketType,
+    storage: NimbusCloudStorage,
+    bucket_type: NimbusBucketType,
     project: str,
     unique_key: str,
     tmp_path: Path,

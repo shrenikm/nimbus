@@ -1,5 +1,5 @@
 """
-Thin factory that turns a CloudConfig into a configured boto3 S3 client.
+Thin factory that turns a NimbusCloudConfig into a configured boto3 S3 client.
 
 The R2 (and most non-AWS S3-compatible) endpoints expect virtual-hosted
 addressing to be off; we set signature_version=s3v4 to satisfy R2's
@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING, Any
 import boto3
 from botocore.config import Config as BotoConfig
 
-from nimbus.config import CloudConfig
+from nimbus.config import NimbusCloudConfig
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -24,7 +24,7 @@ DEFAULT_SIGNATURE_VERSION = "s3v4"
 DEFAULT_ADDRESSING_STYLE = "path"
 
 
-def build_s3_client(config: CloudConfig) -> S3Client:
+def build_s3_client(config: NimbusCloudConfig) -> S3Client:
     """
     Construct a boto3 S3 client wired up for the configured endpoint.
     """

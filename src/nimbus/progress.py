@@ -2,7 +2,7 @@
 tqdm-backed progress callback for boto3 transfer operations.
 
 boto3's upload/download_file accept a Callback(bytes_transferred) function
-that gets invoked after each chunk. ProgressCallback wraps a tqdm bar so
+that gets invoked after each chunk. NimbusProgressCallback wraps a tqdm bar so
 the user gets a live progress meter during long transfers.
 """
 
@@ -14,7 +14,7 @@ from typing import Self
 from tqdm import tqdm
 
 
-class ProgressCallback:
+class NimbusProgressCallback:
     """
     Callable that updates a tqdm progress bar from boto3's per-chunk callback.
 

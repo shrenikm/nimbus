@@ -1,7 +1,7 @@
 """
 High-level interface to S3-compatible object storage.
 
-CloudStorage takes a CloudConfig, builds a boto3 client, and exposes the
+NimbusCloudStorage takes a NimbusCloudConfig, builds a boto3 client, and exposes the
 small set of operations nimbus is meant for: upload, download, list, exists,
 delete, and presigned URLs.
 """
@@ -18,16 +18,16 @@ from boto3.exceptions import Boto3Error, S3UploadFailedError
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import ClientError
 
-from nimbus.bucket import BucketType
+from nimbus.bucket import NimbusBucketType
 from nimbus.client import build_s3_client
-from nimbus.config import CloudConfig
+from nimbus.config import NimbusCloudConfig
 from nimbus.exceptions import (
     NimbusObjectNotFoundError,
     NimbusStorageError,
     NimbusValidationError,
 )
 from nimbus.paths import join_key, normalize_prefix, validate_project_name
-from nimbus.progress import ProgressCallback
+from nimbus.progress import NimbusProgressCallback
 
 if TYPE_CHECKING:
     from mypy_boto3_s3 import S3Client
@@ -69,16 +69,16 @@ def _is_not_found(exc: ClientError) -> bool:
 
 
 @attrs.define(slots=True, eq=False)
-class CloudStorage:
+class NimbusCloudStorage:
     """
-    Façade over a boto3 S3 client scoped to a single CloudConfig.
+    Façade over a boto3 S3 client scoped to a single NimbusCloudConfig.
 
-    Methods accept either a BucketType enum member or a raw string for
+    Methods accept either a NimbusBucketType enum member or a raw string for
     bucket; project is always a plain string chosen by the caller; key is
     the per-object path inside the project namespace.
     """
 
-    config: CloudConfig
+    config: NimbusCloudConfig
     _client: S3Client = attrs.field(init=False)
     _transfer_config: TransferConfig = attrs.field(init=False, factory=default_transfer_config)
 
@@ -95,7 +95,7 @@ class CloudStorage:
     def upload_file(
         self,
         *,
-        bucket: BucketType | str,
+        bucket: NimbusBucketType | str,
         project: str,
         key: str,
         local_path: str | os.PathLike[str],
@@ -111,9 +111,11 @@ class CloudStorage:
         if not path.is_file():
             raise NimbusValidationError(f"local_path is not a file: {path}")
 
-        callback: ProgressCallback | None = None
+        callback: NimbusProgressCallback | None = None
         if show_progress:
-            callback = ProgressCallback(total_bytes=path.stat().st_size, description=object_key)
+            callback = NimbusProgressCallback(
+                total_bytes=path.stat().st_size, description=object_key
+            )
         try:
             self._client.upload_file(
                 Filename=str(path),
@@ -135,7 +137,7 @@ class CloudStorage:
     def download_file(
         self,
         *,
-        bucket: BucketType | str,
+        bucket: NimbusBucketType | str,
         project: str,
         key: str,
         local_path: str | os.PathLike[str],
@@ -153,9 +155,9 @@ class CloudStorage:
         if show_progress:
             total_bytes = self._object_size(bucket_name, object_key)
 
-        callback: ProgressCallback | None = None
+        callback: NimbusProgressCallback | None = None
         if show_progress:
-            callback = ProgressCallback(total_bytes=total_bytes, description=object_key)
+            callback = NimbusProgressCallback(total_bytes=total_bytes, description=object_key)
         try:
             self._client.download_file(
                 Bucket=bucket_name,
@@ -184,7 +186,7 @@ class CloudStorage:
     def upload_dir(
         self,
         *,
-        bucket: BucketType | str,
+        bucket: NimbusBucketType | str,
         project: str,
         key_prefix: str,
         local_dir: str | os.PathLike[str],
@@ -226,7 +228,7 @@ class CloudStorage:
     def list_keys(
         self,
         *,
-        bucket: BucketType | str,
+        bucket: NimbusBucketType | str,
         project: str,
         key_prefix: str = "",
     ) -> Iterator[str]:
@@ -258,7 +260,7 @@ class CloudStorage:
     def exists(
         self,
         *,
-        bucket: BucketType | str,
+        bucket: NimbusBucketType | str,
         project: str,
         key: str,
     ) -> bool:
@@ -280,7 +282,7 @@ class CloudStorage:
     def delete(
         self,
         *,
-        bucket: BucketType | str,
+        bucket: NimbusBucketType | str,
         project: str,
         key: str,
     ) -> None:
@@ -299,7 +301,7 @@ class CloudStorage:
     def presigned_url(
         self,
         *,
-        bucket: BucketType | str,
+        bucket: NimbusBucketType | str,
         project: str,
         key: str,
         expires_in: int = DEFAULT_PRESIGN_EXPIRES_IN,

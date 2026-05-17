@@ -41,7 +41,7 @@ Optional:
 
 | Variable                       | Default   | Purpose                                                |
 |--------------------------------|-----------|--------------------------------------------------------|
-| `NIMBUS_BUCKET_PREFIX`         | `nimbus`  | Combined with each `BucketType` value to form a name.  |
+| `NIMBUS_BUCKET_PREFIX`         | `nimbus`  | Combined with each `NimbusBucketType` value to form a name.  |
 | `NIMBUS_BUCKET_RAW_DATA`       | —         | Override bucket name for the `raw-data` category.      |
 | `NIMBUS_BUCKET_DATASETS`       | —         | Override bucket name for the `datasets` category.      |
 | `NIMBUS_BUCKET_CHECKPOINTS`    | —         | Override bucket name for the `checkpoints` category.   |
@@ -58,63 +58,63 @@ or generates public links; use presigned URLs for short-lived sharing.
 Three generic categories ship with the package, all `StrEnum` values:
 
 ```python
-from nimbus import BucketType
+from nimbus import NimbusBucketType
 
-BucketType.RAW_DATA      # "raw-data"
-BucketType.DATASETS      # "datasets"
-BucketType.CHECKPOINTS   # "checkpoints"
+NimbusBucketType.RAW_DATA      # "raw-data"
+NimbusBucketType.DATASETS      # "datasets"
+NimbusBucketType.CHECKPOINTS   # "checkpoints"
 ```
 
-Because `BucketType` is a `StrEnum`, every API also accepts plain strings.
+Because `NimbusBucketType` is a `StrEnum`, every API also accepts plain strings.
 If you maintain your own taxonomy, just pass strings and configure the
 matching `NIMBUS_BUCKET_*` overrides.
 
 ## Programmatic API
 
 ```python
-from nimbus import BucketType, CloudConfig, CloudStorage
+from nimbus import NimbusBucketType, NimbusCloudConfig, NimbusCloudStorage
 
-config = CloudConfig.from_env()
-storage = CloudStorage(config)
+config = NimbusCloudConfig.from_env()
+storage = NimbusCloudStorage(config)
 
 storage.upload_file(
-    bucket=BucketType.CHECKPOINTS,
+    bucket=NimbusBucketType.CHECKPOINTS,
     project="my-project",
     key="run-2026-05-16/best.pth",
     local_path="./best.pth",
 )
 
 storage.download_file(
-    bucket=BucketType.CHECKPOINTS,
+    bucket=NimbusBucketType.CHECKPOINTS,
     project="my-project",
     key="run-2026-05-16/best.pth",
     local_path="./best.pth",
 )
 
 storage.upload_dir(
-    bucket=BucketType.DATASETS,
+    bucket=NimbusBucketType.DATASETS,
     project="shared",
     key_prefix="my-dataset-v1/",
     local_dir="./my-dataset/",
 )
 
-for key in storage.list_keys(bucket=BucketType.DATASETS, project="shared"):
+for key in storage.list_keys(bucket=NimbusBucketType.DATASETS, project="shared"):
     print(key)
 
 assert storage.exists(
-    bucket=BucketType.CHECKPOINTS,
+    bucket=NimbusBucketType.CHECKPOINTS,
     project="my-project",
     key="run-2026-05-16/best.pth",
 )
 
 storage.delete(
-    bucket=BucketType.CHECKPOINTS,
+    bucket=NimbusBucketType.CHECKPOINTS,
     project="my-project",
     key="run-2026-05-16/old.pth",
 )
 
 url = storage.presigned_url(
-    bucket=BucketType.DATASETS,
+    bucket=NimbusBucketType.DATASETS,
     project="shared",
     key="my-dataset-v1/sample.parquet",
     expires_in=3600,

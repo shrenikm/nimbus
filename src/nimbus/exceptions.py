@@ -16,7 +16,7 @@ class NimbusError(Exception):
 
 class NimbusConfigError(NimbusError):
     """
-    Raised when CloudConfig cannot be constructed (missing env vars,
+    Raised when NimbusCloudConfig cannot be constructed (missing env vars,
     invalid values, etc.).
     """
 

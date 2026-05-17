@@ -1,12 +1,12 @@
 """
 Configuration for nimbus.
 
-CloudConfig is a frozen attrs dataclass that holds everything the storage
+NimbusCloudConfig is a frozen attrs dataclass that holds everything the storage
 client needs: endpoint, credentials, and how to resolve bucket names. The
 from_env() constructor reads a small, documented set of environment
 variables (and a .env file if present) so that calling code can simply do:
 
-    config = CloudConfig.from_env()
+    config = NimbusCloudConfig.from_env()
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import Self
 import attrs
 from dotenv import load_dotenv
 
-from nimbus.bucket import BucketType
+from nimbus.bucket import NimbusBucketType
 from nimbus.exceptions import NimbusConfigError
 
 DEFAULT_BUCKET_PREFIX = "nimbus"
@@ -33,17 +33,19 @@ ENV_BUCKET_OVERRIDE_PREFIX = "NIMBUS_BUCKET_"
 
 
 def _bucket_overrides_converter(
-    value: Mapping[BucketType | str, str] | None,
-) -> Mapping[BucketType, str]:
+    value: Mapping[NimbusBucketType | str, str] | None,
+) -> Mapping[NimbusBucketType, str]:
     """
-    Normalize a user-supplied overrides mapping so keys are always BucketType
+    Normalize a user-supplied overrides mapping so keys are always NimbusBucketType
     members and the resulting mapping is immutable.
     """
     if value is None:
         return {}
-    normalized: dict[BucketType, str] = {}
+    normalized: dict[NimbusBucketType, str] = {}
     for raw_key, raw_value in value.items():
-        bucket_type = raw_key if isinstance(raw_key, BucketType) else BucketType(raw_key)
+        bucket_type = (
+            raw_key if isinstance(raw_key, NimbusBucketType) else NimbusBucketType(raw_key)
+        )
         if not isinstance(raw_value, str) or not raw_value:
             raise NimbusConfigError(
                 f"bucket override for {bucket_type.value!r} must be a non-empty string"
@@ -53,11 +55,11 @@ def _bucket_overrides_converter(
 
 
 @attrs.frozen(slots=True, kw_only=True)
-class CloudConfig:
+class NimbusCloudConfig:
     """
     All settings nimbus needs to talk to an S3-compatible object store.
 
-    bucket_prefix is combined with each BucketType value to form the default
+    bucket_prefix is combined with each NimbusBucketType value to form the default
     bucket name (e.g. "nimbus" + "checkpoints" -> "nimbus-checkpoints").
     bucket_overrides take precedence over the prefix-based name.
     """
@@ -68,7 +70,7 @@ class CloudConfig:
     bucket_prefix: str = attrs.field(
         default=DEFAULT_BUCKET_PREFIX, validator=attrs.validators.instance_of(str)
     )
-    bucket_overrides: Mapping[BucketType, str] = attrs.field(
+    bucket_overrides: Mapping[NimbusBucketType, str] = attrs.field(
         factory=dict, converter=_bucket_overrides_converter
     )
     region: str = attrs.field(default=DEFAULT_REGION, validator=attrs.validators.instance_of(str))
@@ -86,7 +88,7 @@ class CloudConfig:
     @classmethod
     def from_env(cls, *, dotenv_path: str | os.PathLike[str] | None = None) -> Self:
         """
-        Build a CloudConfig from environment variables, loading .env first if
+        Build a NimbusCloudConfig from environment variables, loading .env first if
         one is present in the working directory (or at dotenv_path).
         """
         load_dotenv(dotenv_path=dotenv_path, override=False)
@@ -111,8 +113,8 @@ class CloudConfig:
 
         bucket_prefix = os.environ.get(ENV_BUCKET_PREFIX, "").strip() or DEFAULT_BUCKET_PREFIX
 
-        overrides: dict[BucketType, str] = {}
-        for bucket_type in BucketType:
+        overrides: dict[NimbusBucketType, str] = {}
+        for bucket_type in NimbusBucketType:
             env_name = ENV_BUCKET_OVERRIDE_PREFIX + bucket_type.name
             override_value = os.environ.get(env_name, "").strip()
             if override_value:
@@ -126,7 +128,7 @@ class CloudConfig:
             bucket_overrides=overrides,
         )
 
-    def bucket_name(self, bucket_type: BucketType | str) -> str:
+    def bucket_name(self, bucket_type: NimbusBucketType | str) -> str:
         """
         Resolve the underlying bucket name for a given category.
         """
@@ -137,10 +139,10 @@ class CloudConfig:
         return f"{self.bucket_prefix}-{bucket_type.value}"
 
     @staticmethod
-    def _coerce_bucket_type(bucket_type: BucketType | str) -> BucketType:
-        if isinstance(bucket_type, BucketType):
+    def _coerce_bucket_type(bucket_type: NimbusBucketType | str) -> NimbusBucketType:
+        if isinstance(bucket_type, NimbusBucketType):
             return bucket_type
         try:
-            return BucketType(bucket_type)
+            return NimbusBucketType(bucket_type)
         except ValueError as exc:
             raise NimbusConfigError(f"unknown bucket type: {bucket_type!r}") from exc
