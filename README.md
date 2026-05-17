@@ -88,8 +88,15 @@ storage.download_file(
 storage.upload_dir(
     bucket=NimbusBucketType.DATASETS,
     project="shared",
-    key_prefix="my-dataset-v1/",
     local_dir="./my-dataset/",
+    key_prefix="my-dataset-v1/",
+)
+
+storage.download_dir(
+    bucket=NimbusBucketType.DATASETS,
+    project="shared",
+    local_dir="./my-dataset/",
+    key_prefix="my-dataset-v1/",
 )
 
 for key in storage.list_keys(bucket=NimbusBucketType.DATASETS, project="shared"):
@@ -125,12 +132,15 @@ control characters.
 The package installs a `nimbus` console entry point:
 
 ```
-nimbus upload   <bucket-type> <project> <key> <local-path>
-nimbus download <bucket-type> <project> <key> <local-path>
-nimbus ls       <bucket-type> <project> [<key-prefix>]
-nimbus exists   <bucket-type> <project> <key>
-nimbus rm       <bucket-type> <project> <key>
-nimbus presign  <bucket-type> <project> <key> [--expires 3600]
+nimbus upload        <bucket-type> <project> <key> <local-path>
+nimbus upload-dir    <bucket-type> <project> <local-dir> [--prefix <key-prefix>]
+nimbus download      <bucket-type> <project> <key> <local-path>
+nimbus download-dir  <bucket-type> <project> <local-dir> [--prefix <key-prefix>]
+nimbus ls            <bucket-type> <project> [<key-prefix>]
+nimbus exists        <bucket-type> <project> <key>
+nimbus rm            <bucket-type> <project> <key>
+nimbus presign       <bucket-type> <project> <key> [--expires 3600]
+nimbus purge-test-bucket [--yes]
 ```
 
 `<bucket-type>` is one of `raw-data | datasets | checkpoints | test`. Examples:

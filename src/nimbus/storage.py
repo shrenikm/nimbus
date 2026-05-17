@@ -178,17 +178,36 @@ class NimbusCloudStorage:
         *,
         bucket: NimbusBucketType | str,
         project: str,
-        key_prefix: str,
         local_dir: str | os.PathLike[str],
+        key_prefix: str = "",
         show_progress: bool = True,
         extra_args: dict[str, Any] | None = None,
     ) -> list[str]:
         """
         Recursively upload every file under local_dir.
 
-        The object key for each file is `key_prefix` + `<relative path>`. An
-        empty key_prefix uploads files directly under the project namespace.
-        Returns the list of resolved object keys, in upload order.
+        The local directory itself is NOT part of the key — only its
+        contents are mapped under key_prefix. Same semantics as
+        `rsync local_dir/ dest/` or `aws s3 sync local_dir/ s3://...`.
+
+        Example: given the local tree
+
+            a/
+            ├── c.txt
+            └── b/
+                └── d.txt
+
+        calling upload_dir(project="P", local_dir="a/", key_prefix="z/")
+        produces these object keys:
+
+            P/z/c.txt
+            P/z/b/d.txt
+
+        (NOT P/z/a/c.txt — the "a" directory name is stripped.)
+
+        An empty key_prefix uploads files directly under the project
+        namespace (P/c.txt, P/b/d.txt). Returns the list of resolved
+        object keys, in upload order.
         """
         validate_project_name(project)
         source = Path(local_dir)
@@ -214,6 +233,71 @@ class NimbusCloudStorage:
                 )
             )
         return uploaded
+
+    def download_dir(
+        self,
+        *,
+        bucket: NimbusBucketType | str,
+        project: str,
+        local_dir: str | os.PathLike[str],
+        key_prefix: str = "",
+        show_progress: bool = True,
+    ) -> list[Path]:
+        """
+        Download every object under {project}/{key_prefix} into local_dir,
+        preserving the key structure beneath the prefix.
+
+        local_dir is the destination root — neither the project name nor
+        the prefix is added as an extra subdirectory. Exact mirror of
+        upload_dir: upload_dir(local_dir=L, key_prefix=P) followed by
+        download_dir(local_dir=L, key_prefix=P) round-trips cleanly.
+
+        Example: if the bucket contains
+
+            P/z/c.txt
+            P/z/b/d.txt
+
+        calling download_dir(project="P", local_dir="out/", key_prefix="z/")
+        writes:
+
+            out/
+            ├── c.txt
+            └── b/
+                └── d.txt
+
+        (NOT out/z/c.txt — the prefix is stripped from each key before
+        joining onto local_dir.)
+
+        An empty key_prefix downloads the entire project and preserves
+        the full key structure (out/z/c.txt, out/z/b/d.txt above).
+        Returns the list of local Paths written, in download order.
+        """
+        validate_project_name(project)
+        normalized_prefix = normalize_prefix(key_prefix)
+        if normalized_prefix and not normalized_prefix.endswith("/"):
+            normalized_prefix = f"{normalized_prefix}/"
+
+        dest_root = Path(local_dir)
+        dest_root.mkdir(parents=True, exist_ok=True)
+
+        downloaded: list[Path] = []
+        for project_relative_key in self.list_keys(bucket=bucket, project=project, key_prefix=normalized_prefix):
+            if normalized_prefix and project_relative_key.startswith(normalized_prefix):
+                local_relative = project_relative_key[len(normalized_prefix) :]
+            else:
+                local_relative = project_relative_key
+            if not local_relative:
+                continue
+            dest_path = dest_root / local_relative
+            self.download_file(
+                bucket=bucket,
+                project=project,
+                key=project_relative_key,
+                local_path=dest_path,
+                show_progress=show_progress,
+            )
+            downloaded.append(dest_path)
+        return downloaded
 
     def list_keys(
         self,

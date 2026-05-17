@@ -92,6 +92,46 @@ def upload(
     console.print(f"[green]uploaded[/green] s3://{bucket_name}/{object_key}")
 
 
+@app.command("upload-dir", context_settings=CONTEXT_SETTINGS)
+def upload_dir(
+    bucket_type: BucketArg,
+    project: ProjectArg,
+    local_dir: Annotated[
+        Path,
+        typer.Argument(
+            exists=True,
+            file_okay=False,
+            dir_okay=True,
+            readable=True,
+            help="Local directory to upload recursively.",
+            show_default=False,
+        ),
+    ],
+    key_prefix: Annotated[
+        str,
+        typer.Option("--prefix", help="Remote key prefix to upload under (default: directly under the project)."),
+    ] = "",
+    no_progress: NoProgressOpt = False,
+) -> None:
+    """
+    Recursively upload every file under [bold]local_dir[/bold] to
+    [bold]<bucket-type>/<project>/<prefix>/...[/bold].
+
+    The local directory name itself is not part of the key — only its
+    contents are uploaded under the prefix (rsync-style).
+    """
+    storage = _build_storage()
+    uploaded = storage.upload_dir(
+        bucket=bucket_type,
+        project=project,
+        local_dir=local_dir,
+        key_prefix=key_prefix,
+        show_progress=not no_progress,
+    )
+    bucket_name = storage.config.bucket_name(bucket_type)
+    console.print(f"[green]uploaded[/green] {len(uploaded)} file(s) to s3://{bucket_name}/{project}/")
+
+
 @app.command(context_settings=CONTEXT_SETTINGS)
 def download(
     bucket_type: BucketArg,
@@ -121,6 +161,45 @@ def download(
         show_progress=not no_progress,
     )
     console.print(f"[green]downloaded[/green] to {destination}")
+
+
+@app.command("download-dir", context_settings=CONTEXT_SETTINGS)
+def download_dir(
+    bucket_type: BucketArg,
+    project: ProjectArg,
+    local_dir: Annotated[
+        Path,
+        typer.Argument(
+            file_okay=False,
+            dir_okay=True,
+            writable=True,
+            help="Local directory to write into (created if missing).",
+            show_default=False,
+        ),
+    ],
+    key_prefix: Annotated[
+        str,
+        typer.Option("--prefix", help="Remote key prefix to download (default: the entire project)."),
+    ] = "",
+    no_progress: NoProgressOpt = False,
+) -> None:
+    """
+    Recursively download every object under
+    [bold]<bucket-type>/<project>/<prefix>[/bold] into [bold]local_dir[/bold],
+    preserving the key structure beneath the prefix.
+
+    Files land directly inside local_dir — the prefix is not added as an
+    extra subdirectory. Exact mirror of upload-dir.
+    """
+    storage = _build_storage()
+    downloaded = storage.download_dir(
+        bucket=bucket_type,
+        project=project,
+        local_dir=local_dir,
+        key_prefix=key_prefix,
+        show_progress=not no_progress,
+    )
+    console.print(f"[green]downloaded[/green] {len(downloaded)} file(s) into {local_dir}")
 
 
 @app.command("ls", context_settings=CONTEXT_SETTINGS)
