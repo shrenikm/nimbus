@@ -1,5 +1,19 @@
 # AGENTS.md
 
+## Docs are part of the contract
+
+The docs site at `https://shrenikm.github.io/nimbus/` is built from `docs/` + auto-generated API reference via `mkdocstrings` from the source. Any code change that touches public behavior MUST be reflected in the docs in the same change:
+
+- New / renamed / removed public class, method, or function → update `docs/api.md` (the section list is hand-curated; `mkdocstrings` pulls the rest from docstrings).
+- New / changed CLI command, flag, or output → update `docs/cli.md`.
+- New / changed env var, bucket-naming behavior, or setup step → update `docs/getting-started.md` and `.env.example`.
+- New / changed `NimbusBucketType` member or naming convention → update `docs/bucket-types.md`.
+- Test infrastructure change (fixtures, markers, opt-in mechanism) → update `docs/testing.md`.
+
+The docs site is built on every push to `main` via `.github/workflows/docs.yml`. It uses `mkdocs build --strict`, so broken links, missing nav entries, or unresolved mkdocstrings references will fail the build. Run `mkdocs serve` locally before pushing if you're not sure.
+
+The README.md is intentionally minimal — it links to the docs. Don't duplicate doc content there.
+
 ## Generic-only rule
 
 This package must stay project-agnostic. No references to any specific consumer project — in code, docstrings, examples, or tests. Project names are always plain strings passed in by callers; never add an enum for them. Examples in docs use placeholders like `my-project`, `my-dataset`.
@@ -17,9 +31,11 @@ Only what `src/nimbus/__init__.py` exports is public. Everything else (env-name 
 - Reserved for integration tests. The integration test file hardcodes it; do not add an env knob to redirect.
 - `NimbusCloudStorage.purge_test_bucket()` takes no `bucket` argument **on purpose**. The safety guarantee is that bulk deletion can never be aimed at `raw-data`, `datasets`, or `checkpoints`. Do not relax this signature or add a generic bulk-delete method.
 
-## Bucket names are fixed
+## Bucket naming
 
-Final bucket names are always `{bucket_prefix}-{bucket_type.value}`, with `bucket_prefix` defaulting to `"nimbus"`.
+Default bucket name for each `NimbusBucketType` is `{bucket_prefix}-{bucket_type.value}` with `bucket_prefix="nimbus"`. Each can be overridden with a per-type env var that supplies the **full bucket name** (not a suffix): `NIMBUS_BUCKET_RAW_DATA`, `NIMBUS_BUCKET_DATASETS`, `NIMBUS_BUCKET_CHECKPOINTS`, `NIMBUS_BUCKET_TEST`. The prefix itself is intentionally NOT env-configurable — don't add `NIMBUS_BUCKET_PREFIX`. If someone wants a non-`nimbus-` prefix, they set the per-type overrides.
+
+`purge_test_bucket()` operates on whatever `NimbusBucketType.TEST` resolves to, including after an override. The safety guarantee is "only the bucket type configured as TEST", not "literally `nimbus-test`".
 
 ## Test architecture
 
@@ -58,11 +74,13 @@ The conda env is named `nimbus` (Python 3.12). Common commands:
 
 ```
 conda activate nimbus
-uv pip install -e ".[dev]"          # install / reinstall after dep changes
+uv pip install -e ".[dev,docs]"     # install / reinstall after dep changes
 ruff check . && ruff format .       # lint + format
 pytest                              # unit tests only (offline)
 NIMBUS_INTEGRATION_TESTS=1 pytest -m integration   # real R2 (needs .env)
 NIMBUS_INTEGRATION_TESTS=1 pytest                  # everything
+mkdocs serve                        # preview docs at http://127.0.0.1:8000
+mkdocs build --strict               # same check CI runs
 ```
 
 ## Build / install

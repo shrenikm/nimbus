@@ -24,6 +24,7 @@ class TestNimbusCloudConfigConstruction:
         assert config.secret_access_key == "sk"
         assert config.bucket_prefix == DEFAULT_BUCKET_PREFIX
         assert config.region == DEFAULT_REGION
+        assert dict(config.bucket_overrides) == {}
 
     def test_repr_does_not_leak_secret(self) -> None:
         config = NimbusCloudConfig(
@@ -74,6 +75,26 @@ class TestBucketNameResolution:
         assert config.bucket_name(NimbusBucketType.RAW_DATA) == "my-prefix-raw-data"
         assert config.bucket_name(NimbusBucketType.DATASETS) == "my-prefix-datasets"
         assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "my-prefix-checkpoints"
+
+    def test_explicit_overrides_replace_full_name(self) -> None:
+        config = NimbusCloudConfig(
+            endpoint_url="https://example.com",
+            access_key_id="ak",
+            secret_access_key="sk",
+            bucket_prefix="my-prefix",
+            bucket_overrides={NimbusBucketType.CHECKPOINTS: "totally-custom-ckpts"},
+        )
+        assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "totally-custom-ckpts"
+        assert config.bucket_name(NimbusBucketType.DATASETS) == "my-prefix-datasets"
+
+    def test_overrides_accept_string_keys(self) -> None:
+        config = NimbusCloudConfig(
+            endpoint_url="https://example.com",
+            access_key_id="ak",
+            secret_access_key="sk",
+            bucket_overrides={"checkpoints": "totally-custom-ckpts"},
+        )
+        assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "totally-custom-ckpts"
 
     def test_string_bucket_type_resolved(self) -> None:
         config = NimbusCloudConfig(
@@ -133,3 +154,19 @@ class TestFromEnv:
         monkeypatch.setenv("R2_SECRET_ACCESS_KEY", "sk")
         with pytest.raises(NimbusConfigError):
             NimbusCloudConfig.from_env()
+
+    def test_per_type_env_overrides(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._setup_required(monkeypatch)
+        monkeypatch.setenv("NIMBUS_BUCKET_CHECKPOINTS", "my-ckpts")
+        monkeypatch.setenv("NIMBUS_BUCKET_DATASETS", "my-datasets")
+        config = NimbusCloudConfig.from_env()
+        assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "my-ckpts"
+        assert config.bucket_name(NimbusBucketType.DATASETS) == "my-datasets"
+        assert config.bucket_name(NimbusBucketType.RAW_DATA) == "nimbus-raw-data"
+        assert config.bucket_name(NimbusBucketType.TEST) == "nimbus-test"
+
+    def test_test_bucket_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._setup_required(monkeypatch)
+        monkeypatch.setenv("NIMBUS_BUCKET_TEST", "my-private-test-bucket")
+        config = NimbusCloudConfig.from_env()
+        assert config.bucket_name(NimbusBucketType.TEST) == "my-private-test-bucket"

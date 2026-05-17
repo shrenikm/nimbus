@@ -203,6 +203,189 @@ class TestUploadDir:
                 show_progress=False,
             )
 
+    def test_concurrent_upload_preserves_submission_order(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        root = tmp_path / "many"
+        root.mkdir()
+        expected = sorted(f"file-{i:03d}.bin" for i in range(20))
+        for name in expected:
+            (root / name).write_bytes(name.encode())
+
+        uploaded = storage.upload_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=root,
+            show_progress=False,
+            max_workers=8,
+        )
+
+        assert [key.removeprefix(f"{PROJECT}/") for key in uploaded] == expected
+
+    def test_max_workers_one_runs_serially(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        root = tmp_path / "serial"
+        root.mkdir()
+        (root / "a.txt").write_text("a")
+        (root / "b.txt").write_text("b")
+
+        uploaded = storage.upload_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=root,
+            show_progress=False,
+            max_workers=1,
+        )
+
+        assert uploaded == [f"{PROJECT}/a.txt", f"{PROJECT}/b.txt"]
+
+    def test_invalid_max_workers_raises(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        root = tmp_path / "one"
+        root.mkdir()
+        (root / "a.txt").write_text("a")
+        with pytest.raises(NimbusValidationError):
+            storage.upload_dir(
+                bucket=NimbusBucketType.DATASETS,
+                project=PROJECT,
+                local_dir=root,
+                show_progress=False,
+                max_workers=0,
+            )
+
+
+class TestDownloadDir:
+    def _populate_remote(self, storage: NimbusCloudStorage, tmp_path: Path, *, prefix: str = "release-v1/") -> None:
+        root = tmp_path / "src"
+        (root / "a" / "b").mkdir(parents=True)
+        (root / "a" / "one.txt").write_text("one")
+        (root / "a" / "b" / "two.txt").write_text("two")
+        (root / "top.txt").write_text("top")
+        storage.upload_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=root,
+            key_prefix=prefix,
+            show_progress=False,
+        )
+
+    def test_downloads_with_prefix_strips_prefix(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        self._populate_remote(storage, tmp_path, prefix="release-v1/")
+        dest = tmp_path / "dest"
+
+        written = storage.download_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=dest,
+            key_prefix="release-v1/",
+            show_progress=False,
+        )
+
+        assert sorted(p.relative_to(dest).as_posix() for p in written) == [
+            "a/b/two.txt",
+            "a/one.txt",
+            "top.txt",
+        ]
+        assert (dest / "a" / "one.txt").read_text() == "one"
+        assert (dest / "a" / "b" / "two.txt").read_text() == "two"
+        assert (dest / "top.txt").read_text() == "top"
+
+    def test_empty_prefix_downloads_whole_project(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        self._populate_remote(storage, tmp_path, prefix="release-v1/")
+        dest = tmp_path / "dest"
+
+        written = storage.download_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=dest,
+            show_progress=False,
+        )
+
+        assert sorted(p.relative_to(dest).as_posix() for p in written) == [
+            "release-v1/a/b/two.txt",
+            "release-v1/a/one.txt",
+            "release-v1/top.txt",
+        ]
+
+    def test_empty_project_returns_empty_list(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        dest = tmp_path / "dest"
+        assert (
+            storage.download_dir(
+                bucket=NimbusBucketType.DATASETS,
+                project=PROJECT,
+                local_dir=dest,
+                show_progress=False,
+            )
+            == []
+        )
+        assert dest.exists()
+
+    def test_prefix_without_trailing_slash_is_padded(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        self._populate_remote(storage, tmp_path, prefix="release-v1/")
+        dest = tmp_path / "dest"
+
+        written = storage.download_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=dest,
+            key_prefix="release-v1",
+            show_progress=False,
+        )
+
+        assert sorted(p.relative_to(dest).as_posix() for p in written) == [
+            "a/b/two.txt",
+            "a/one.txt",
+            "top.txt",
+        ]
+
+    def test_concurrent_download_preserves_submission_order(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        src = tmp_path / "src"
+        src.mkdir()
+        expected_relatives = sorted(f"file-{i:03d}.bin" for i in range(20))
+        for name in expected_relatives:
+            (src / name).write_bytes(name.encode())
+        storage.upload_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=src,
+            key_prefix="batch/",
+            show_progress=False,
+            max_workers=8,
+        )
+
+        dest = tmp_path / "dest"
+        written = storage.download_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=dest,
+            key_prefix="batch/",
+            show_progress=False,
+            max_workers=8,
+        )
+
+        assert [p.relative_to(dest).as_posix() for p in written] == expected_relatives
+
+    def test_round_trip_with_upload_dir(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
+        src = tmp_path / "src"
+        (src / "nested").mkdir(parents=True)
+        (src / "nested" / "file.bin").write_bytes(b"\x00\x01\x02")
+        (src / "top.bin").write_bytes(b"top")
+
+        storage.upload_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=src,
+            key_prefix="snapshot-7/",
+            show_progress=False,
+        )
+        dest = tmp_path / "dest"
+        storage.download_dir(
+            bucket=NimbusBucketType.DATASETS,
+            project=PROJECT,
+            local_dir=dest,
+            key_prefix="snapshot-7/",
+            show_progress=False,
+        )
+
+        assert (dest / "nested" / "file.bin").read_bytes() == b"\x00\x01\x02"
+        assert (dest / "top.bin").read_bytes() == b"top"
+
 
 class TestListExistsDelete:
     def _upload(self, storage: NimbusCloudStorage, tmp_path: Path, *, key: str, data: bytes = b"x") -> None:

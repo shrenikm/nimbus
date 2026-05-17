@@ -12,6 +12,7 @@ variables (and a .env file if present) so that calling code can simply do:
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from typing import Self
 
 import attrs
@@ -27,6 +28,26 @@ ENV_ENDPOINT_URL = "R2_ENDPOINT_URL"
 ENV_ACCOUNT_ID = "R2_ACCOUNT_ID"
 ENV_ACCESS_KEY_ID = "R2_ACCESS_KEY_ID"
 ENV_SECRET_ACCESS_KEY = "R2_SECRET_ACCESS_KEY"
+ENV_BUCKET_OVERRIDE_PREFIX = "NIMBUS_BUCKET_"
+
+
+def _bucket_overrides_converter(
+    value: Mapping[NimbusBucketType | str, str] | None,
+) -> Mapping[NimbusBucketType, str]:
+    """
+    Normalize a user-supplied overrides mapping so keys are always
+    NimbusBucketType members. Each value is the full bucket name to use
+    in place of the prefix-derived default.
+    """
+    if value is None:
+        return {}
+    normalized: dict[NimbusBucketType, str] = {}
+    for raw_key, raw_value in value.items():
+        bucket_type = raw_key if isinstance(raw_key, NimbusBucketType) else NimbusBucketType(raw_key)
+        if not isinstance(raw_value, str) or not raw_value:
+            raise NimbusConfigError(f"bucket override for {bucket_type.value!r} must be a non-empty string")
+        normalized[bucket_type] = raw_value
+    return normalized
 
 
 @attrs.frozen(slots=True, kw_only=True)
@@ -34,14 +55,19 @@ class NimbusCloudConfig:
     """
     All settings nimbus needs to talk to an S3-compatible object store.
 
-    bucket_prefix is combined with each NimbusBucketType value to form the
-    final bucket name (e.g. "nimbus" + "checkpoints" -> "nimbus-checkpoints").
+    By default each NimbusBucketType resolves to the bucket
+    f"{bucket_prefix}-{bucket_type.value}" (e.g. "nimbus-checkpoints").
+    bucket_overrides lets you replace any of those defaults with an
+    explicit full bucket name on a per-type basis — the override is the
+    complete bucket name, not a suffix, so prefix is ignored for overridden
+    types.
     """
 
     endpoint_url: str = attrs.field(validator=attrs.validators.instance_of(str))
     access_key_id: str = attrs.field(validator=attrs.validators.instance_of(str))
     secret_access_key: str = attrs.field(validator=attrs.validators.instance_of(str), repr=False)
     bucket_prefix: str = attrs.field(default=DEFAULT_BUCKET_PREFIX, validator=attrs.validators.instance_of(str))
+    bucket_overrides: Mapping[NimbusBucketType, str] = attrs.field(factory=dict, converter=_bucket_overrides_converter)
     region: str = attrs.field(default=DEFAULT_REGION, validator=attrs.validators.instance_of(str))
 
     def __attrs_post_init__(self) -> None:
@@ -59,6 +85,12 @@ class NimbusCloudConfig:
         """
         Build a NimbusCloudConfig from environment variables, loading .env first if
         one is present in the working directory (or at dotenv_path).
+
+        Reads R2_ENDPOINT_URL (or R2_ACCOUNT_ID), R2_ACCESS_KEY_ID,
+        R2_SECRET_ACCESS_KEY, and any of NIMBUS_BUCKET_RAW_DATA,
+        NIMBUS_BUCKET_DATASETS, NIMBUS_BUCKET_CHECKPOINTS, NIMBUS_BUCKET_TEST
+        — each treated as the full bucket name for the corresponding
+        category. The bucket prefix itself is not env-configurable.
         """
         load_dotenv(dotenv_path=dotenv_path, override=False)
 
@@ -78,17 +110,31 @@ class NimbusCloudConfig:
         if not secret_access_key:
             raise NimbusConfigError(f"missing environment variable: {ENV_SECRET_ACCESS_KEY}")
 
+        overrides: dict[NimbusBucketType, str] = {}
+        for bucket_type in NimbusBucketType:
+            env_name = ENV_BUCKET_OVERRIDE_PREFIX + bucket_type.name
+            override_value = os.environ.get(env_name, "").strip()
+            if override_value:
+                overrides[bucket_type] = override_value
+
         return cls(
             endpoint_url=endpoint_url,
             access_key_id=access_key_id,
             secret_access_key=secret_access_key,
+            bucket_overrides=overrides,
         )
 
     def bucket_name(self, bucket_type: NimbusBucketType | str) -> str:
         """
         Resolve the underlying bucket name for a given category.
+
+        Returns the per-type override if one is set, otherwise the
+        prefix-derived default `f"{bucket_prefix}-{bucket_type.value}"`.
         """
         bucket_type = self._coerce_bucket_type(bucket_type)
+        override = self.bucket_overrides.get(bucket_type)
+        if override is not None:
+            return override
         return f"{self.bucket_prefix}-{bucket_type.value}"
 
     @staticmethod

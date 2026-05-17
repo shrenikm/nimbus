@@ -148,6 +148,71 @@ def test_no_args_shows_help(runner: CliRunner) -> None:
     assert "download" in result.output
 
 
+def test_upload_dir_then_download_dir_round_trip(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
+    src = tmp_path / "src"
+    (src / "nested").mkdir(parents=True)
+    (src / "nested" / "a.bin").write_bytes(b"AAA")
+    (src / "top.bin").write_bytes(b"TOP")
+
+    upload_result = runner.invoke(
+        app,
+        [
+            "upload-dir",
+            "datasets",
+            PROJECT,
+            str(src),
+            "--prefix",
+            "release-v1/",
+            "--no-progress",
+        ],
+    )
+    assert upload_result.exit_code == 0, upload_result.output
+    assert "uploaded 2 file(s)" in upload_result.output
+
+    dest = tmp_path / "dest"
+    download_result = runner.invoke(
+        app,
+        [
+            "download-dir",
+            "datasets",
+            PROJECT,
+            str(dest),
+            "--prefix",
+            "release-v1/",
+            "--no-progress",
+        ],
+    )
+    assert download_result.exit_code == 0, download_result.output
+    assert "downloaded 2 file(s)" in download_result.output
+    assert (dest / "nested" / "a.bin").read_bytes() == b"AAA"
+    assert (dest / "top.bin").read_bytes() == b"TOP"
+
+
+def test_download_dir_without_prefix_downloads_whole_project(
+    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
+) -> None:
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.bin").write_bytes(b"A")
+    cli_storage.upload_dir(
+        bucket=NimbusBucketType.DATASETS,
+        project=PROJECT,
+        local_dir=src,
+        key_prefix="prefix/",
+        show_progress=False,
+    )
+
+    dest = tmp_path / "dest"
+    result = runner.invoke(
+        app,
+        ["download-dir", "datasets", PROJECT, str(dest), "--no-progress"],
+    )
+    assert result.exit_code == 0, result.output
+    assert (dest / "prefix" / "a.bin").read_bytes() == b"A"
+
+
 def test_purge_test_bucket_with_yes_flag(runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"x")

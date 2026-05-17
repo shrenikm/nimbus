@@ -38,6 +38,12 @@ dev = [
     "moto[s3]==5.2.1",
     "ruff==0.15.13",
 ]
+docs = [
+    "mkdocs==1.6.1",
+    "mkdocs-material==9.7.6",
+    "mkdocstrings==1.0.4",
+    "mkdocstrings-python==2.0.3",
+]
 
 [project.scripts]
 nimbus = "nimbus.cli:main"
