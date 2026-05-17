@@ -47,9 +47,7 @@ def cli_storage(mocked_s3: None, cli_env: None) -> NimbusCloudStorage:
     return cs
 
 
-def test_upload_then_ls_then_download(
-    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
-) -> None:
+def test_upload_then_ls_then_download(runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"hello")
 
@@ -87,9 +85,7 @@ def test_upload_then_ls_then_download(
     assert dest.read_bytes() == b"hello"
 
 
-def test_exists_exit_codes(
-    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
-) -> None:
+def test_exists_exit_codes(runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"x")
     cli_storage.upload_file(
@@ -108,9 +104,7 @@ def test_exists_exit_codes(
     assert "no" in no.output
 
 
-def test_rm_removes_object(
-    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
-) -> None:
+def test_rm_removes_object(runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"x")
     cli_storage.upload_file(
@@ -122,14 +116,10 @@ def test_rm_removes_object(
     )
     result = runner.invoke(main, ["rm", "checkpoints", PROJECT, "doomed.bin"])
     assert result.exit_code == 0
-    assert not cli_storage.exists(
-        bucket=NimbusBucketType.CHECKPOINTS, project=PROJECT, key="doomed.bin"
-    )
+    assert not cli_storage.exists(bucket=NimbusBucketType.CHECKPOINTS, project=PROJECT, key="doomed.bin")
 
 
-def test_presign_outputs_url(
-    runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path
-) -> None:
+def test_presign_outputs_url(runner: CliRunner, cli_storage: NimbusCloudStorage, tmp_path: Path) -> None:
     src = tmp_path / "src.bin"
     src.write_bytes(b"x")
     cli_storage.upload_file(

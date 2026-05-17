@@ -34,9 +34,7 @@ class TestTransferDefaults:
 
 
 class TestUploadDownload:
-    def test_upload_and_download_round_trip(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_upload_and_download_round_trip(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         payload = b"hello-world"
         src = tmp_path / "src.bin"
         src.write_bytes(payload)
@@ -72,9 +70,7 @@ class TestUploadDownload:
         )
         assert object_key == f"{PROJECT}/folder/a.bin"
 
-    def test_upload_rejects_nonexistent_local_file(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_upload_rejects_nonexistent_local_file(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         with pytest.raises(NimbusValidationError):
             storage.upload_file(
                 bucket=NimbusBucketType.DATASETS,
@@ -94,9 +90,7 @@ class TestUploadDownload:
                 show_progress=False,
             )
 
-    def test_download_missing_object_raises_not_found(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_download_missing_object_raises_not_found(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         with pytest.raises(NimbusObjectNotFoundError):
             storage.download_file(
                 bucket=NimbusBucketType.CHECKPOINTS,
@@ -106,14 +100,10 @@ class TestUploadDownload:
                 show_progress=False,
             )
 
-    def test_upload_to_missing_bucket_raises_storage_error(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_upload_to_missing_bucket_raises_storage_error(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         src = tmp_path / "x"
         src.write_bytes(b"y")
-        storage.client.delete_bucket(
-            Bucket=storage.config.bucket_name(NimbusBucketType.CHECKPOINTS)
-        )
+        storage.client.delete_bucket(Bucket=storage.config.bucket_name(NimbusBucketType.CHECKPOINTS))
         with pytest.raises(NimbusStorageError):
             storage.upload_file(
                 bucket=NimbusBucketType.CHECKPOINTS,
@@ -155,9 +145,7 @@ class TestMultipartUpload:
 
 
 class TestUploadDir:
-    def test_uploads_all_files_recursively(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_uploads_all_files_recursively(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         root = tmp_path / "dataset"
         (root / "a").mkdir(parents=True)
         (root / "a" / "b").mkdir()
@@ -179,9 +167,7 @@ class TestUploadDir:
             f"{PROJECT}/release-v1/top.txt",
         ]
 
-    def test_empty_prefix_uploads_directly_under_project(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_empty_prefix_uploads_directly_under_project(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         root = tmp_path / "dataset"
         root.mkdir()
         (root / "file.bin").write_bytes(b"x")
@@ -194,9 +180,7 @@ class TestUploadDir:
         )
         assert uploaded == [f"{PROJECT}/file.bin"]
 
-    def test_prefix_without_trailing_slash_is_padded(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_prefix_without_trailing_slash_is_padded(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         root = tmp_path / "dataset"
         root.mkdir()
         (root / "x.bin").write_bytes(b"x")
@@ -221,9 +205,7 @@ class TestUploadDir:
 
 
 class TestListExistsDelete:
-    def _upload(
-        self, storage: NimbusCloudStorage, tmp_path: Path, *, key: str, data: bytes = b"x"
-    ) -> None:
+    def _upload(self, storage: NimbusCloudStorage, tmp_path: Path, *, key: str, data: bytes = b"x") -> None:
         path = tmp_path / "u.bin"
         path.write_bytes(data)
         storage.upload_file(
@@ -234,9 +216,7 @@ class TestListExistsDelete:
             show_progress=False,
         )
 
-    def test_list_keys_yields_keys_with_project_stripped(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_list_keys_yields_keys_with_project_stripped(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         self._upload(storage, tmp_path, key="a.bin")
         self._upload(storage, tmp_path, key="folder/b.bin")
         keys = sorted(storage.list_keys(bucket=NimbusBucketType.DATASETS, project=PROJECT))
@@ -261,9 +241,7 @@ class TestListExistsDelete:
 
         storage.client.get_paginator = mocked_get_paginator  # type: ignore[method-assign]
 
-        keys = sorted(
-            storage.list_keys(bucket=NimbusBucketType.DATASETS, project=PROJECT, key_prefix="many/")
-        )
+        keys = sorted(storage.list_keys(bucket=NimbusBucketType.DATASETS, project=PROJECT, key_prefix="many/"))
         assert len(keys) == 25
         assert keys[0] == "many/item-000.bin"
         assert bucket_name  # silence unused warning
@@ -271,35 +249,25 @@ class TestListExistsDelete:
     def test_list_keys_with_prefix(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         self._upload(storage, tmp_path, key="folder/a.bin")
         self._upload(storage, tmp_path, key="other/b.bin")
-        keys = sorted(
-            storage.list_keys(
-                bucket=NimbusBucketType.DATASETS, project=PROJECT, key_prefix="folder/"
-            )
-        )
+        keys = sorted(storage.list_keys(bucket=NimbusBucketType.DATASETS, project=PROJECT, key_prefix="folder/"))
         assert keys == ["folder/a.bin"]
 
     def test_exists_true_and_false(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         self._upload(storage, tmp_path, key="present.bin")
         assert storage.exists(bucket=NimbusBucketType.DATASETS, project=PROJECT, key="present.bin")
-        assert not storage.exists(
-            bucket=NimbusBucketType.DATASETS, project=PROJECT, key="absent.bin"
-        )
+        assert not storage.exists(bucket=NimbusBucketType.DATASETS, project=PROJECT, key="absent.bin")
 
     def test_delete_removes_object(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         self._upload(storage, tmp_path, key="doomed.bin")
         storage.delete(bucket=NimbusBucketType.DATASETS, project=PROJECT, key="doomed.bin")
-        assert not storage.exists(
-            bucket=NimbusBucketType.DATASETS, project=PROJECT, key="doomed.bin"
-        )
+        assert not storage.exists(bucket=NimbusBucketType.DATASETS, project=PROJECT, key="doomed.bin")
 
     def test_delete_missing_is_silent(self, storage: NimbusCloudStorage) -> None:
         storage.delete(bucket=NimbusBucketType.DATASETS, project=PROJECT, key="never-existed.bin")
 
 
 class TestPresignedUrl:
-    def test_returns_url_with_bucket_and_key(
-        self, storage: NimbusCloudStorage, tmp_path: Path
-    ) -> None:
+    def test_returns_url_with_bucket_and_key(self, storage: NimbusCloudStorage, tmp_path: Path) -> None:
         src = tmp_path / "presign.bin"
         src.write_bytes(b"abc")
         storage.upload_file(
@@ -330,9 +298,7 @@ class TestPresignedUrl:
 
 
 class TestErrorMapping:
-    def test_head_object_other_error_raises_storage_error(
-        self, storage: NimbusCloudStorage
-    ) -> None:
+    def test_head_object_other_error_raises_storage_error(self, storage: NimbusCloudStorage) -> None:
         def boom(*_args: object, **_kwargs: object) -> None:
             raise ClientError({"Error": {"Code": "AccessDenied", "Message": "no"}}, "HeadObject")
 

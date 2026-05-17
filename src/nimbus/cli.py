@@ -43,9 +43,7 @@ def main() -> None:
 @click.argument("key", type=str)
 @click.argument("local_path", type=click.Path(exists=True, dir_okay=False, readable=True))
 @click.option("--no-progress", "no_progress", is_flag=True, help="Suppress the tqdm progress bar.")
-def upload_command(
-    bucket_type: str, project: str, key: str, local_path: str, no_progress: bool
-) -> None:
+def upload_command(bucket_type: str, project: str, key: str, local_path: str, no_progress: bool) -> None:
     storage = _build_storage()
     object_key = storage.upload_file(
         bucket=NimbusBucketType(bucket_type.lower()),
@@ -64,9 +62,7 @@ def upload_command(
 @click.argument("key", type=str)
 @click.argument("local_path", type=click.Path(dir_okay=False, writable=True))
 @click.option("--no-progress", "no_progress", is_flag=True, help="Suppress the tqdm progress bar.")
-def download_command(
-    bucket_type: str, project: str, key: str, local_path: str, no_progress: bool
-) -> None:
+def download_command(bucket_type: str, project: str, key: str, local_path: str, no_progress: bool) -> None:
     storage = _build_storage()
     destination = storage.download_file(
         bucket=NimbusBucketType(bucket_type.lower()),
@@ -84,9 +80,7 @@ def download_command(
 @click.argument("key_prefix", type=str, required=False, default="")
 def ls_command(bucket_type: str, project: str, key_prefix: str) -> None:
     storage = _build_storage()
-    keys = storage.list_keys(
-        bucket=NimbusBucketType(bucket_type.lower()), project=project, key_prefix=key_prefix
-    )
+    keys = storage.list_keys(bucket=NimbusBucketType(bucket_type.lower()), project=project, key_prefix=key_prefix)
     for object_key in keys:
         click.echo(object_key)
 

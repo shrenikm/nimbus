@@ -56,9 +56,7 @@ def project() -> str:
 
 
 @pytest.fixture
-def unique_key(
-    storage: NimbusCloudStorage, bucket_type: NimbusBucketType, project: str
-) -> Iterator[str]:
+def unique_key(storage: NimbusCloudStorage, bucket_type: NimbusBucketType, project: str) -> Iterator[str]:
     """
     Yield a unique key for the test and best-effort delete it afterward.
     """
@@ -93,9 +91,7 @@ def test_upload_exists_list_presign_download_delete_round_trip(
     listed = list(storage.list_keys(bucket=bucket_type, project=project, key_prefix="itest/"))
     assert unique_key in listed
 
-    presigned = storage.presigned_url(
-        bucket=bucket_type, project=project, key=unique_key, expires_in=300
-    )
+    presigned = storage.presigned_url(bucket=bucket_type, project=project, key=unique_key, expires_in=300)
     assert presigned.startswith("http")
 
     dest = tmp_path / "out.bin"

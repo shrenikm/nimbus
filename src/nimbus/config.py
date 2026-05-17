@@ -43,13 +43,9 @@ def _bucket_overrides_converter(
         return {}
     normalized: dict[NimbusBucketType, str] = {}
     for raw_key, raw_value in value.items():
-        bucket_type = (
-            raw_key if isinstance(raw_key, NimbusBucketType) else NimbusBucketType(raw_key)
-        )
+        bucket_type = raw_key if isinstance(raw_key, NimbusBucketType) else NimbusBucketType(raw_key)
         if not isinstance(raw_value, str) or not raw_value:
-            raise NimbusConfigError(
-                f"bucket override for {bucket_type.value!r} must be a non-empty string"
-            )
+            raise NimbusConfigError(f"bucket override for {bucket_type.value!r} must be a non-empty string")
         normalized[bucket_type] = raw_value
     return normalized
 
@@ -67,12 +63,8 @@ class NimbusCloudConfig:
     endpoint_url: str = attrs.field(validator=attrs.validators.instance_of(str))
     access_key_id: str = attrs.field(validator=attrs.validators.instance_of(str))
     secret_access_key: str = attrs.field(validator=attrs.validators.instance_of(str), repr=False)
-    bucket_prefix: str = attrs.field(
-        default=DEFAULT_BUCKET_PREFIX, validator=attrs.validators.instance_of(str)
-    )
-    bucket_overrides: Mapping[NimbusBucketType, str] = attrs.field(
-        factory=dict, converter=_bucket_overrides_converter
-    )
+    bucket_prefix: str = attrs.field(default=DEFAULT_BUCKET_PREFIX, validator=attrs.validators.instance_of(str))
+    bucket_overrides: Mapping[NimbusBucketType, str] = attrs.field(factory=dict, converter=_bucket_overrides_converter)
     region: str = attrs.field(default=DEFAULT_REGION, validator=attrs.validators.instance_of(str))
 
     def __attrs_post_init__(self) -> None:
@@ -99,9 +91,7 @@ class NimbusCloudConfig:
             if account_id:
                 endpoint_url = f"https://{account_id}.r2.cloudflarestorage.com"
         if not endpoint_url:
-            raise NimbusConfigError(
-                f"missing endpoint configuration: set {ENV_ENDPOINT_URL} or {ENV_ACCOUNT_ID}"
-            )
+            raise NimbusConfigError(f"missing endpoint configuration: set {ENV_ENDPOINT_URL} or {ENV_ACCOUNT_ID}")
 
         access_key_id = os.environ.get(ENV_ACCESS_KEY_ID, "").strip()
         if not access_key_id:

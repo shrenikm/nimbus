@@ -22,7 +22,7 @@ cd nimbus
 pip install -e ".[dev]"
 ```
 
-Python 3.11 or newer is required.
+Python 3.12 or newer is required.
 
 ## Configuration
 

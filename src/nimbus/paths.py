@@ -31,9 +31,7 @@ def validate_project_name(project: str) -> str:
     if not project:
         raise NimbusValidationError("project name must not be empty")
     if not PROJECT_NAME_PATTERN.fullmatch(project):
-        raise NimbusValidationError(
-            f"invalid project name {project!r}: must match {PROJECT_NAME_PATTERN.pattern}"
-        )
+        raise NimbusValidationError(f"invalid project name {project!r}: must match {PROJECT_NAME_PATTERN.pattern}")
     return project
 
 

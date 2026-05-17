@@ -113,9 +113,7 @@ class NimbusCloudStorage:
 
         callback: NimbusProgressCallback | None = None
         if show_progress:
-            callback = NimbusProgressCallback(
-                total_bytes=path.stat().st_size, description=object_key
-            )
+            callback = NimbusProgressCallback(total_bytes=path.stat().st_size, description=object_key)
         try:
             self._client.upload_file(
                 Filename=str(path),
@@ -126,9 +124,7 @@ class NimbusCloudStorage:
                 Callback=callback,
             )
         except (ClientError, S3UploadFailedError, Boto3Error) as exc:
-            raise NimbusStorageError(
-                f"upload failed for s3://{bucket_name}/{object_key}: {exc}"
-            ) from exc
+            raise NimbusStorageError(f"upload failed for s3://{bucket_name}/{object_key}: {exc}") from exc
         finally:
             if callback is not None:
                 callback.close()
@@ -168,16 +164,10 @@ class NimbusCloudStorage:
             )
         except ClientError as exc:
             if _is_not_found(exc):
-                raise NimbusObjectNotFoundError(
-                    f"object not found: s3://{bucket_name}/{object_key}"
-                ) from exc
-            raise NimbusStorageError(
-                f"download failed for s3://{bucket_name}/{object_key}: {exc}"
-            ) from exc
+                raise NimbusObjectNotFoundError(f"object not found: s3://{bucket_name}/{object_key}") from exc
+            raise NimbusStorageError(f"download failed for s3://{bucket_name}/{object_key}: {exc}") from exc
         except Boto3Error as exc:
-            raise NimbusStorageError(
-                f"download failed for s3://{bucket_name}/{object_key}: {exc}"
-            ) from exc
+            raise NimbusStorageError(f"download failed for s3://{bucket_name}/{object_key}: {exc}") from exc
         finally:
             if callback is not None:
                 callback.close()
@@ -253,9 +243,7 @@ class NimbusCloudStorage:
                     else:
                         yield raw_key
         except ClientError as exc:
-            raise NimbusStorageError(
-                f"list failed for s3://{bucket_name}/{full_prefix}: {exc}"
-            ) from exc
+            raise NimbusStorageError(f"list failed for s3://{bucket_name}/{full_prefix}: {exc}") from exc
 
     def exists(
         self,
@@ -274,9 +262,7 @@ class NimbusCloudStorage:
         except ClientError as exc:
             if _is_not_found(exc):
                 return False
-            raise NimbusStorageError(
-                f"head failed for s3://{bucket_name}/{object_key}: {exc}"
-            ) from exc
+            raise NimbusStorageError(f"head failed for s3://{bucket_name}/{object_key}: {exc}") from exc
         return True
 
     def delete(
@@ -294,9 +280,7 @@ class NimbusCloudStorage:
         try:
             self._client.delete_object(Bucket=bucket_name, Key=object_key)
         except ClientError as exc:
-            raise NimbusStorageError(
-                f"delete failed for s3://{bucket_name}/{object_key}: {exc}"
-            ) from exc
+            raise NimbusStorageError(f"delete failed for s3://{bucket_name}/{object_key}: {exc}") from exc
 
     def presigned_url(
         self,
@@ -322,9 +306,7 @@ class NimbusCloudStorage:
                 ExpiresIn=expires_in,
             )
         except ClientError as exc:
-            raise NimbusStorageError(
-                f"presign failed for s3://{bucket_name}/{object_key}: {exc}"
-            ) from exc
+            raise NimbusStorageError(f"presign failed for s3://{bucket_name}/{object_key}: {exc}") from exc
 
     def _object_size(self, bucket_name: str, object_key: str) -> int:
         """
@@ -335,10 +317,6 @@ class NimbusCloudStorage:
             response = self._client.head_object(Bucket=bucket_name, Key=object_key)
         except ClientError as exc:
             if _is_not_found(exc):
-                raise NimbusObjectNotFoundError(
-                    f"object not found: s3://{bucket_name}/{object_key}"
-                ) from exc
-            raise NimbusStorageError(
-                f"head failed for s3://{bucket_name}/{object_key}: {exc}"
-            ) from exc
+                raise NimbusObjectNotFoundError(f"object not found: s3://{bucket_name}/{object_key}") from exc
+            raise NimbusStorageError(f"head failed for s3://{bucket_name}/{object_key}: {exc}") from exc
         return int(response.get("ContentLength", 0))
