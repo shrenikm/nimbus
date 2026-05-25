@@ -27,7 +27,7 @@ from nimbus.exceptions import (
 )
 from nimbus.storage import NimbusCloudStorage
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 
 __all__ = [
     "NimbusBucketType",

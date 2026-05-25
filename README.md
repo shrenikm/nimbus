@@ -11,7 +11,7 @@ delete, presigned URLs, plus matching directory operations — keyed by a
 **Full docs: <https://shrenikm.github.io/nimbus/>**
 
 - [Getting started](https://shrenikm.github.io/nimbus/getting-started/) — install, R2 setup, environment variables.
-- [Bucket types](https://shrenikm.github.io/nimbus/bucket-types/) — the four categories and how they resolve.
+- [Bucket types](https://shrenikm.github.io/nimbus/bucket-types/) — the five categories and how they resolve.
 - [CLI reference](https://shrenikm.github.io/nimbus/cli/) — every command, with examples.
 - [API reference](https://shrenikm.github.io/nimbus/api/) — auto-generated.
 - [Testing](https://shrenikm.github.io/nimbus/testing/) — unit and integration workflow.

@@ -43,7 +43,7 @@ def _build_storage() -> NimbusCloudStorage:
 
 BucketArg = Annotated[
     NimbusBucketType,
-    typer.Argument(help="One of: raw-data | datasets | checkpoints | test.", show_default=False),
+    typer.Argument(help="One of: raw-data | datasets | checkpoints | app-data | test.", show_default=False),
 ]
 ProjectArg = Annotated[
     str,

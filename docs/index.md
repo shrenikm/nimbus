@@ -34,7 +34,7 @@ nimbus upload checkpoints my-project run-2026-05-16/best.pth ./best.pth
 ## Where to go next
 
 - **[Getting started](getting-started.md)** — install, conda env, R2 setup, environment variables.
-- **[Bucket types](bucket-types.md)** — the four categories and how names resolve.
+- **[Bucket types](bucket-types.md)** — the five categories and how names resolve.
 - **[CLI reference](cli.md)** — every command, with examples.
 - **[API reference](api.md)** — auto-generated from the source.
 - **[Testing](testing.md)** — unit and integration test workflow.

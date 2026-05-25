@@ -10,7 +10,7 @@ nimbus <command> -h          # per-command help
 ```
 
 `<bucket-type>` in all of the below is one of:
-`raw-data | datasets | checkpoints | test`.
+`raw-data | datasets | checkpoints | app-data | test`.
 
 ## Single-object commands
 
