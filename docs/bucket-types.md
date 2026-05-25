@@ -5,7 +5,7 @@ namespace**, and **object key**. The final S3 key is always
 `{project}/{key}`; the underlying bucket name is derived from the bucket
 type.
 
-## The four categories
+## The five categories
 
 ```python
 from nimbus import NimbusBucketType
@@ -13,13 +13,14 @@ from nimbus import NimbusBucketType
 NimbusBucketType.RAW_DATA      # "raw-data"     → bucket nimbus-raw-data
 NimbusBucketType.DATASETS      # "datasets"     → bucket nimbus-datasets
 NimbusBucketType.CHECKPOINTS   # "checkpoints"  → bucket nimbus-checkpoints
+NimbusBucketType.APP_DATA      # "app-data"     → bucket nimbus-app-data
 NimbusBucketType.TEST          # "test"         → bucket nimbus-test
 ```
 
 By default, bucket names are derived from the enum value as
 `{prefix}-{value}` with `prefix="nimbus"`. Each can be replaced with an
 arbitrary full bucket name via env var — see [Per-bucket name
-overrides](getting-started.md#per-bucket-name-overrides) for the four
+overrides](getting-started.md#per-bucket-name-overrides) for the five
 variables (`NIMBUS_BUCKET_RAW_DATA`, etc.). Overrides are full names,
 not suffixes — the `nimbus-` prefix is *not* prepended.
 
@@ -34,9 +35,10 @@ string form (`"checkpoints"` is interchangeable with
 | `raw-data` | Raw inputs that are written once and rarely modified. |
 | `datasets` | Processed / curated datasets ready for training. |
 | `checkpoints` | Model checkpoints and training artifacts. |
+| `app-data` | Generic application data (DB snapshots, exported config, generated artifacts). The specific nature lives in the key path. |
 | `test` | **Reserved for the integration test suite.** Don't put real data here. |
 
-These are conventions, not hard rules — the package treats all four
+These are conventions, not hard rules — the package treats all five
 identically at the storage layer. The category split exists so that
 buckets can be lifecycled and budgeted independently on the provider side
 (e.g., aggressive retention on `test`, none on `raw-data`).
@@ -82,7 +84,7 @@ tags.
 
 ## Privacy
 
-All four buckets are expected to be **private**. Nimbus never enables
+All five buckets are expected to be **private**. Nimbus never enables
 public bucket access, never generates `r2.dev`-style public URLs, and
 never sets public ACLs. For short-lived sharing, use
 [presigned URLs][nimbus.storage.NimbusCloudStorage.presigned_url].

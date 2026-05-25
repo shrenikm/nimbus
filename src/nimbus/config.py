@@ -88,9 +88,10 @@ class NimbusCloudConfig:
 
         Reads R2_ENDPOINT_URL (or R2_ACCOUNT_ID), R2_ACCESS_KEY_ID,
         R2_SECRET_ACCESS_KEY, and any of NIMBUS_BUCKET_RAW_DATA,
-        NIMBUS_BUCKET_DATASETS, NIMBUS_BUCKET_CHECKPOINTS, NIMBUS_BUCKET_TEST
-        — each treated as the full bucket name for the corresponding
-        category. The bucket prefix itself is not env-configurable.
+        NIMBUS_BUCKET_DATASETS, NIMBUS_BUCKET_CHECKPOINTS,
+        NIMBUS_BUCKET_APP_DATA, NIMBUS_BUCKET_TEST — each treated as the full
+        bucket name for the corresponding category. The bucket prefix itself
+        is not env-configurable.
         """
         load_dotenv(dotenv_path=dotenv_path, override=False)
 

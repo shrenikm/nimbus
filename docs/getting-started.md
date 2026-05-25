@@ -43,9 +43,10 @@ You need three things from Cloudflare:
     token with the S3 API"*. Copy both Access Key ID and Secret Access Key
     before navigating away — Cloudflare never shows the secret again.
 
-You also need to create the four buckets in the R2 dashboard up front:
-`nimbus-raw-data`, `nimbus-datasets`, `nimbus-checkpoints`, `nimbus-test`.
-Nimbus never creates or deletes buckets itself.
+You also need to create the five buckets in the R2 dashboard up front:
+`nimbus-raw-data`, `nimbus-datasets`, `nimbus-checkpoints`,
+`nimbus-app-data`, `nimbus-test`. Nimbus never creates or deletes buckets
+itself.
 
 ## Configuration
 
@@ -64,14 +65,15 @@ the current working directory is loaded automatically.
 
 By default each `NimbusBucketType` resolves to `nimbus-<value>`
 (`nimbus-raw-data`, `nimbus-datasets`, `nimbus-checkpoints`,
-`nimbus-test`). You can replace any of those with a full bucket name of
-your choice via env vars:
+`nimbus-app-data`, `nimbus-test`). You can replace any of those with a
+full bucket name of your choice via env vars:
 
 | Variable                       | Replaces default for |
 |--------------------------------|----------------------|
 | `NIMBUS_BUCKET_RAW_DATA`       | `raw-data`           |
 | `NIMBUS_BUCKET_DATASETS`       | `datasets`           |
 | `NIMBUS_BUCKET_CHECKPOINTS`    | `checkpoints`        |
+| `NIMBUS_BUCKET_APP_DATA`       | `app-data`           |
 | `NIMBUS_BUCKET_TEST`           | `test`               |
 
 The value is the **full bucket name**, not a suffix — `nimbus-` is not

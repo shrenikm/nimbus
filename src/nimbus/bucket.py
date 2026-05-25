@@ -15,12 +15,16 @@ class NimbusBucketType(StrEnum):
     """
     Categories of data nimbus knows how to address.
 
-    The first three are intentionally generic ML-data categories. TEST is
-    reserved for integration testing and is the only bucket the test suite
-    is ever permitted to write to or read from.
+    The first three are intentionally generic ML-data categories. APP_DATA is a
+    generic sibling for application data that does not belong to an ML data
+    pipeline (e.g. database snapshots, exported config, generated artifacts);
+    the specific nature of any object is expressed in its key path, not the
+    bucket type. TEST is reserved for integration testing and is the only
+    bucket the test suite is ever permitted to write to or read from.
     """
 
     RAW_DATA = "raw-data"
     DATASETS = "datasets"
     CHECKPOINTS = "checkpoints"
+    APP_DATA = "app-data"
     TEST = "test"

@@ -407,7 +407,8 @@ class NimbusCloudStorage:
 
         Hardcoded to NimbusBucketType.TEST. There is intentionally no way to
         point this method at any other bucket — bulk deletion against
-        raw-data, datasets, or checkpoints is not exposed by this package.
+        raw-data, datasets, checkpoints, or app-data is not exposed by this
+        package.
         """
         bucket_name = self.config.bucket_name(NimbusBucketType.TEST)
         paginator = self._client.get_paginator("list_objects_v2")

@@ -75,6 +75,24 @@ class TestBucketNameResolution:
         assert config.bucket_name(NimbusBucketType.RAW_DATA) == "my-prefix-raw-data"
         assert config.bucket_name(NimbusBucketType.DATASETS) == "my-prefix-datasets"
         assert config.bucket_name(NimbusBucketType.CHECKPOINTS) == "my-prefix-checkpoints"
+        assert config.bucket_name(NimbusBucketType.APP_DATA) == "my-prefix-app-data"
+
+    def test_app_data_default_uses_default_prefix(self) -> None:
+        config = NimbusCloudConfig(
+            endpoint_url="https://example.com",
+            access_key_id="ak",
+            secret_access_key="sk",
+        )
+        assert config.bucket_name(NimbusBucketType.APP_DATA) == "nimbus-app-data"
+
+    def test_app_data_string_form_coerces(self) -> None:
+        config = NimbusCloudConfig(
+            endpoint_url="https://example.com",
+            access_key_id="ak",
+            secret_access_key="sk",
+        )
+        assert NimbusBucketType("app-data") is NimbusBucketType.APP_DATA
+        assert config.bucket_name("app-data") == "nimbus-app-data"
 
     def test_explicit_overrides_replace_full_name(self) -> None:
         config = NimbusCloudConfig(
@@ -170,3 +188,9 @@ class TestFromEnv:
         monkeypatch.setenv("NIMBUS_BUCKET_TEST", "my-private-test-bucket")
         config = NimbusCloudConfig.from_env()
         assert config.bucket_name(NimbusBucketType.TEST) == "my-private-test-bucket"
+
+    def test_app_data_env_override(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._setup_required(monkeypatch)
+        monkeypatch.setenv("NIMBUS_BUCKET_APP_DATA", "my-app-data-bucket")
+        config = NimbusCloudConfig.from_env()
+        assert config.bucket_name(NimbusBucketType.APP_DATA) == "my-app-data-bucket"
